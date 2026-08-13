@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PendingList — By FaBi</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+  :root{
+    --bg: #F7F5FF; --ink: #2D2A4A; --ink-soft: #6E699A;
+    --primary: #6C5CE7; --primary-dark: #5645d1;
+    --coral: #FF6B6B; --teal: #00B8A9; --amber: #FFC145;
+    --card-bg: #FFFFFF; --border: #E9E5FB; --radius: 18px;
+    --shadow: 0 8px 24px rgba(108,92,231,0.10);
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 8% 12%, rgba(108,92,231,0.08), transparent 40%),
+      radial-gradient(circle at 92% 88%, rgba(255,107,107,0.08), transparent 40%);
+    color: var(--ink); font-family: 'Hind Siliguri', 'Poppins', sans-serif; min-height: 100vh;
+  }
+  h1,h2,h3, .display{ font-family: 'Baloo 2', 'Hind Siliguri', sans-serif; }
+  .num{ font-family: 'Poppins', sans-serif; }
+  button{ font-family: inherit; cursor:pointer; border:none; }
+  input, select, textarea{ font-family: inherit; }
+
+  /* ---------- Auth Screen ---------- */
+  #authScreen{ min-height: 100vh; display:flex; align-items:center; justify-content:center; padding: 24px; }
+  .auth-card{
+    background: var(--card-bg); border-radius: 24px; box-shadow: var(--shadow);
+    padding: 40px 32px; width: 100%; max-width: 380px; text-align:center; position: relative; overflow: hidden;
+  }
+  .auth-card::before{
+    content:""; position:absolute; top:-60px; right:-60px; width:140px; height:140px; border-radius:50%;
+    background: linear-gradient(135deg, var(--amber), var(--coral)); opacity:0.18;
+  }
+  .brand-mark{
+    width:64px; height:64px; border-radius:20px; background: linear-gradient(135deg, var(--primary), var(--teal));
+    display:flex; align-items:center; justify-content:center; margin: 0 auto 16px; font-size: 30px;
+    transform: rotate(-6deg); box-shadow: 0 6px 16px rgba(108,92,231,0.35);
+  }
+  .auth-card h1{ font-size: 26px; margin: 0 0 4px; color: var(--ink); }
+  .auth-card p.sub{ color: var(--ink-soft); font-size: 14px; margin: 0 0 24px; }
+  .field{ text-align:left; margin-bottom: 14px; }
+  .field label{ font-size: 13px; color: var(--ink-soft); font-weight:600; display:block; margin-bottom:6px; }
+  .field input, .field select, .field textarea{
+    width:100%; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--border);
+    font-size: 15px; outline:none; transition: border-color .15s; background:#fff;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color: var(--primary); }
+  .btn-primary{
+    width:100%; padding: 13px; border-radius: 12px; background: linear-gradient(135deg, var(--primary), #8073F0);
+    color:#fff; font-weight:700; font-size:15px; box-shadow: 0 6px 16px rgba(108,92,231,0.35); margin-top: 6px;
+  }
+  .btn-primary:active{ transform: translateY(1px); }
+  .auth-toggle{ margin-top:16px; font-size: 13.5px; color: var(--ink-soft); }
+  .auth-toggle a{ color: var(--primary); font-weight:600; text-decoration:none; cursor:pointer; }
+  .auth-error{ background:#FFF0F0; color:#D64545; font-size:13px; padding:10px 12px; border-radius:10px; margin-bottom:12px; display:none; text-align:left; }
+  .demo-link{ display:block; margin-top:18px; font-size:13px; color: var(--ink-soft); text-decoration:underline; cursor:pointer; }
+  .demo-badge{ display:none; background: var(--amber); color:#5c4200; font-weight:700; font-size:11.5px; padding: 4px 10px; border-radius: 999px; margin-bottom:14px; }
+
+  /* ---------- App Screen ---------- */
+  #appScreen{ display:none; max-width: 780px; margin: 0 auto; padding: 0 16px 100px; }
+
+  .sticky-top{ position: sticky; top:0; z-index:40; background: var(--bg); padding-top:14px; padding-bottom:8px; }
+
+  .header-clock{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px 10px;
+    background:#fff; border-radius: 12px; padding: 8px 14px; margin-bottom: 12px;
+    font-family:'Poppins'; font-size: 11.5px; color: var(--ink-soft); box-shadow: 0 2px 8px rgba(45,42,74,0.05);
+  }
+  .header-clock b{ color: var(--ink); font-weight:700; }
+  #headerDate{ line-height:1.5; }
+
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 14px; }
+  .topbar .who{ display:flex; align-items:center; gap:10px; }
+  .avatar{
+    width:38px; height:38px; border-radius:12px; background: linear-gradient(135deg, var(--teal), var(--primary));
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-family:'Baloo 2';
+    transform: rotate(-4deg);
+  }
+  .who .name{ font-weight:700; font-size:15px; }
+  .who .name .demo-tag{ color: var(--coral); font-size:11.5px; font-weight:700; margin-left:4px; }
+  .who .name .admin-tag{ color: var(--primary); font-size:11.5px; font-weight:700; margin-left:4px; }
+  .topbar-actions{ display:flex; align-items:center; gap:4px; }
+  .icon-round{
+    width:34px; height:34px; border-radius:10px; background:#fff; color:var(--ink-soft);
+    display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow: 0 2px 6px rgba(45,42,74,0.06);
+  }
+  .icon-round:hover{ background:#EFEBFF; color: var(--primary); }
+  #logoutBtn{ background:none; color: var(--ink-soft); font-size:13px; font-weight:600; padding:4px 5px; border-radius:10px; }
+  #logoutBtn:hover{ background:#EFEBFF; }
+
+  .hero{
+    background: linear-gradient(135deg, var(--primary) 0%, #8073F0 55%, var(--teal) 130%);
+    border-radius: 14px; padding: 9px 14px; color:#fff; display:flex; align-items:center; justify-content:space-between;
+    gap: 10px; box-shadow: 0 6px 14px rgba(108,92,231,0.25); margin-bottom: 10px;
+  }
+  .hero .greet{ font-size: 9.5px; opacity:0.9; margin:0; }
+  .hero h2{ margin:0; font-size: 13px; }
+  .hero .sub{ font-size:9.5px; opacity:0.85; margin-top:1px; }
+  .ring-wrap{ position:relative; width:38px; height:38px; flex-shrink:0; }
+  .ring-wrap svg{ transform: rotate(-90deg); width:38px; height:38px; }
+  .ring-wrap .pct{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Poppins'; font-weight:700; font-size:9.5px; }
+
+  /* Stats row — compact (~1/3 of original size) */
+  .stats-row{ display:flex; gap:6px; margin-bottom: 14px; }
+  .stat-chip{ flex:1; background: var(--card-bg); border-radius: 9px; padding: 5px 4px; text-align:center; box-shadow: 0 2px 6px rgba(45,42,74,0.05); }
+  .stat-chip .n{ font-family:'Poppins'; font-weight:700; font-size:12.5px; line-height:1.2; }
+  .stat-chip .l{ font-size:8.5px; color: var(--ink-soft); margin-top:1px; letter-spacing:0.2px; }
+  .stat-chip.pending .n{ color: var(--coral); }
+  .stat-chip.done .n{ color: var(--teal); }
+  .stat-chip.overdue .n{ color: #D64545; }
+
+  .add-bar{ display:flex; gap:8px; margin-bottom: 16px; }
+  .add-bar input{ flex:1; padding: 13px 16px; border-radius: 14px; border: 1.5px solid var(--border); font-size: 14.5px; outline:none; background:#fff; }
+  .add-bar input:focus{ border-color: var(--primary); }
+  .add-bar button{ width:48px; border-radius:14px; background: linear-gradient(135deg, var(--primary), #8073F0); color:#fff; font-size: 22px; font-weight:700; box-shadow: 0 6px 14px rgba(108,92,231,0.30); }
+
+  .filters{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:6px; }
+  .filters::-webkit-scrollbar{ display:none; }
+  .chip{ white-space:nowrap; padding: 8px 14px; border-radius: 999px; font-size:13px; font-weight:600; background:#fff; color: var(--ink-soft); border:1.5px solid var(--border); }
+  .chip.active{ background: var(--ink); color:#fff; border-color: var(--ink); }
+
+  .toolbar{ display:flex; align-items:center; justify-content:space-between; margin: 14px 0 10px; gap:8px; }
+  .toolbar select{ border:1.5px solid var(--border); border-radius:10px; padding:7px 10px; font-size:12.5px; color:var(--ink-soft); background:#fff; }
+  .export-btn{ background:#fff; border:1.5px solid var(--border); color:var(--ink); font-weight:600; font-size:12.5px; padding:7px 12px; border-radius:10px; display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .export-btn:hover{ border-color: var(--primary); color: var(--primary); }
+
+  .task-grid{ display:flex; flex-direction:column; gap:12px; }
+  .task-card{
+    background: var(--card-bg); border-radius: 16px; padding: 14px 16px; box-shadow: 0 4px 14px rgba(45,42,74,0.06);
+    display:flex; align-items:flex-start; gap:12px; border-left: 5px solid var(--cat-color, var(--primary)); position:relative; animation: pop .25s ease;
+  }
+  @keyframes pop{ from{ opacity:0; transform: translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .task-card.done{ opacity:0.55; }
+  .task-card.done .t-title{ text-decoration: line-through; }
+  .check{ width:24px; height:24px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; margin-top:2px; display:flex; align-items:center; justify-content:center; transition: all .15s; background:#fff; }
+  .check.checked{ background: var(--teal); border-color: var(--teal); color:#fff; font-size:13px; }
+  .t-body{ flex:1; min-width:0; }
+  .t-title{ font-weight:600; font-size:15px; line-height:1.4; word-break:break-word; }
+  .t-details{
+    font-size:12.5px; color: var(--ink-soft); margin-top:4px; line-height:1.4; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+    background:#F8F7FF; padding:5px 9px; border-radius:8px;
+  }
+  .t-details.expanded{ white-space:pre-wrap; overflow:visible; text-overflow:clip; }
+  .t-meta{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .tag{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; background: rgba(108,92,231,0.10); color: var(--primary); }
+  .tag.cat{ background: var(--cat-bg, rgba(108,92,231,0.10)); color: var(--cat-color, var(--primary)); }
+  .tag.start{ background:#EEF1FF; color:#4A5FD6; }
+  .tag.due{ background:#F1EFFF; color: var(--ink-soft); }
+  .tag.due.overdue{ background:#FFEAEA; color:#D64545; }
+  .tag.countdown{ background:#EAFBF8; color:#029081; }
+  .tag.countdown.late{ background:#FFEAEA; color:#D64545; }
+  .tag.repeat{ background:#FFF6E5; color:#B8790A; }
+  .prio-dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:5px; }
+  .t-actions{ display:flex; flex-direction:column; gap:6px; }
+  .icon-btn{ width:28px; height:28px; border-radius:9px; background:#F5F3FF; color:var(--ink-soft); display:flex; align-items:center; justify-content:center; font-size:13px; }
+  .icon-btn:hover{ background:#EFEBFF; color: var(--primary); }
+  .icon-btn.del:hover{ background:#FFEAEA; color:#D64545; }
+
+  .empty-state{ text-align:center; padding: 50px 20px; color: var(--ink-soft); }
+  .empty-state .big{ font-size:40px; margin-bottom:10px; }
+  .empty-state p{ margin:0; font-size:14px; }
+
+  /* ---------- Modal (shared) — sticky head with actions always on top ---------- */
+  .modal-backdrop{ display:none; position:fixed; inset:0; background:rgba(45,42,74,0.35); align-items:flex-end; justify-content:center; z-index:60; backdrop-filter: blur(2px); }
+  .modal{
+    background:#fff; width:100%; max-width:440px; border-radius: 22px 22px 0 0;
+    animation: slideup .2s ease; max-height:88vh; display:flex; flex-direction:column; overflow:hidden;
+  }
+  @media (min-width:520px){ .modal-backdrop{ align-items:center; } .modal{ border-radius: 22px; } }
+  @keyframes slideup{ from{ transform: translateY(30px); opacity:0;} to{transform:translateY(0); opacity:1;} }
+  .modal-head{ padding:18px 20px 14px; border-bottom:1.5px solid var(--border); flex-shrink:0; background:#fff; }
+  .modal-head h3{ margin:0 0 12px; font-size:18px; }
+  .modal-body{ padding:16px 20px 26px; overflow-y:auto; flex:1; }
+  .modal-body .field label{ font-size:12.5px; color:var(--ink-soft); font-weight:700; margin-bottom:6px; display:block; }
+  .modal-body .field input, .modal-body .field select, .modal-body .field textarea{ width:100%; padding:11px 13px; border-radius:11px; border:1.5px solid var(--border); font-size:14.5px; outline:none; }
+  .modal-body .field textarea{ resize:vertical; min-height:60px; }
+  .modal-body .field input:focus, .modal-body .field select:focus, .modal-body .field textarea:focus{ border-color: var(--primary); }
+  .row2{ display:flex; gap:10px; }
+  .row2 .field{ flex:1; }
+  .modal-actions{ display:flex; gap:10px; }
+  .btn-ghost{ flex:1; padding:11px; border-radius:12px; background:#F5F3FF; color:var(--ink-soft); font-weight:700; font-size:13.5px; }
+  .btn-save{ flex:2; padding:11px; border-radius:12px; background: linear-gradient(135deg, var(--primary), #8073F0); color:#fff; font-weight:700; font-size:13.5px; box-shadow: 0 6px 14px rgba(108,92,231,0.30); }
+  .section-divider{ border:none; border-top:1.5px solid var(--border); margin: 16px 0; }
+  .hint-text{ font-size:12px; color: var(--ink-soft); margin-top:4px; line-height:1.4; }
+
+  /* Settings rows */
+  .settings-section-title{ font-size:12.5px; font-weight:700; color: var(--ink-soft); text-transform:uppercase; letter-spacing:0.4px; margin: 4px 0 4px; }
+  .settings-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
+  .settings-row:last-child{ border-bottom:none; }
+  .settings-row .label{ font-size:14px; font-weight:500; color: var(--ink); flex:1; min-width:0; }
+  .settings-row select{ padding:8px 10px; border-radius:9px; border:1.5px solid var(--border); font-size:13px; background:#fff; flex-shrink:0; }
+
+  .admin-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); gap:10px; }
+  .admin-row:last-child{ border-bottom:none; }
+  .admin-user-name{ font-weight:700; font-size:14px; }
+  .admin-user-meta{ font-size:11.5px; color:var(--ink-soft); margin-top:2px; }
+  .status-pill{ font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; }
+  .status-pill.active{ background:#EAFBF8; color:#029081; }
+  .status-pill.disabled{ background:#FFEAEA; color:#D64545; }
+  .toggle-switch{ position:relative; width:42px; height:24px; border-radius:999px; background:#E9E5FB; flex-shrink:0; cursor:pointer; }
+  .toggle-switch.on{ background: var(--teal); }
+  .toggle-switch .knob{ position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition: left .15s; }
+  .toggle-switch.on .knob{ left:21px; }
+  .expandable-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 0; cursor:pointer; }
+  .expandable-row .chev{ color: var(--ink-soft); transition: transform .15s; }
+  .expandable-row.open .chev{ transform: rotate(90deg); }
+
+  @media (max-width: 420px){ .hero h2{ font-size:18px; } }
+</style>
+</head>
+<body>
+
+<!-- ================= AUTH SCREEN ================= -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="brand-mark">✅</div>
+    <h1>PendingList</h1>
+    <p class="sub" data-i18n="authTagline">By FaBi — your tasks, your control</p>
+
+    <div class="demo-badge" id="demoBadge" data-i18n="demoBadge">⚡ Demo Mode (Firebase not configured)</div>
+    <div class="auth-error" id="authError"></div>
+
+    <div id="loginForm">
+      <div class="field"><label data-i18n="emailLabel">Email</label><input type="email" id="loginEmail" placeholder="you@example.com"></div>
+      <div class="field"><label data-i18n="passLabel">Password</label><input type="password" id="loginPass" placeholder="••••••••"></div>
+      <button class="btn-primary" onclick="handleLogin()" data-i18n="loginBtn">Log In</button>
+      <div class="auth-toggle"><span data-i18n="newHere">New here?</span> <a onclick="toggleAuthMode()" data-i18n="createAccount">Create an account</a></div>
+    </div>
+
+    <div id="signupForm" style="display:none;">
+      <div class="field"><label data-i18n="nameLabel">Name</label><input type="text" id="signupName" placeholder="Your name"></div>
+      <div class="field"><label data-i18n="emailLabel">Email</label><input type="email" id="signupEmail" placeholder="you@example.com"></div>
+      <div class="field"><label data-i18n="passLabel">Password</label><input type="password" id="signupPass" placeholder="At least 6 characters"></div>
+      <button class="btn-primary" onclick="handleSignup()" data-i18n="signupBtn">Create Account</button>
+      <div class="auth-toggle"><span data-i18n="haveAccount">Already have an account?</span> <a onclick="toggleAuthMode()" data-i18n="loginBtn">Log In</a></div>
+    </div>
+
+    <a class="demo-link" onclick="enterDemoMode()" data-i18n="demoLink">Or enter Demo Mode without logging in →</a>
+  </div>
+</div>
+
+<!-- ================= APP SCREEN ================= -->
+<div id="appScreen">
+  <div class="sticky-top">
+    <div class="header-clock">
+      <span id="headerDate">--</span>
+      <b id="headerTime" class="num">--:--:--</b>
+    </div>
+
+    <div class="topbar">
+      <div class="who">
+        <div class="avatar" id="avatarInitial">F</div>
+        <div>
+          <div class="name" id="userName">FaBi<span class="demo-tag" id="demoTag" style="display:none;">DEMO</span><span class="admin-tag" id="adminTag" style="display:none;">ADMIN</span></div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="icon-round" id="adminBtn" style="display:none;" onclick="openAdminModal()" title="Admin">👑</div>
+        <div class="icon-round" onclick="openSettingsModal()" title="Settings">⚙️</div>
+        <button id="logoutBtn" onclick="handleLogout()" data-i18n="logoutBtn">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div>
+      <p class="greet" data-i18n="greetLine">Today's status</p>
+      <h2 id="heroLine" data-i18n="heroDefault">Let's get organized!</h2>
+      <p class="sub" id="heroSub">0 tasks pending</p>
+    </div>
+    <div class="ring-wrap">
+      <svg width="38" height="38" viewBox="0 0 38 38">
+        <circle cx="19" cy="19" r="15" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="4"/>
+        <circle id="ringProgress" cx="19" cy="19" r="15" fill="none" stroke="#FFC145" stroke-width="4" stroke-linecap="round" stroke-dasharray="94.2" stroke-dashoffset="94.2"/>
+      </svg>
+      <div class="pct" id="ringPct">0%</div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-chip"><div class="n num" id="statTotal">0</div><div class="l" data-i18n="statTotal">Total</div></div>
+    <div class="stat-chip pending"><div class="n num" id="statPending">0</div><div class="l" data-i18n="statPending">Pending</div></div>
+    <div class="stat-chip done"><div class="n num" id="statDone">0</div><div class="l" data-i18n="statDone">Done</div></div>
+    <div class="stat-chip overdue"><div class="n num" id="statOverdue">0</div><div class="l" data-i18n="statOverdue">Overdue</div></div>
+  </div>
+
+  <div class="add-bar">
+    <input type="text" id="quickAddInput" data-i18n-ph="quickAddPh" placeholder="Type a new task and press Enter...">
+    <button onclick="openModal()">+</button>
+  </div>
+
+  <div class="filters">
+    <div class="chip active" data-filter="all" onclick="setFilter('all')" data-i18n="filterAll">All</div>
+    <div class="chip" data-filter="pending" onclick="setFilter('pending')" data-i18n="filterPending">Pending</div>
+    <div class="chip" data-filter="today" onclick="setFilter('today')" data-i18n="filterToday">Today</div>
+    <div class="chip" data-filter="overdue" onclick="setFilter('overdue')" data-i18n="filterOverdue">Overdue</div>
+    <div class="chip" data-filter="done" onclick="setFilter('done')" data-i18n="filterDone">Done</div>
+  </div>
+
+  <div class="toolbar">
+    <select id="sortSelect" onchange="render()">
+      <option value="created" data-i18n="sortNew">Sort: Newest first</option>
+      <option value="due" data-i18n="sortDue">Sort: Due date</option>
+      <option value="priority" data-i18n="sortPriority">Sort: Priority</option>
+    </select>
+    <button class="export-btn" onclick="exportPDF()">⬇ <span data-i18n="exportPdf">PDF Export</span></button>
+  </div>
+
+  <div class="task-grid" id="taskGrid"></div>
+
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <div class="big">🗒️</div>
+    <p data-i18n="emptyText">No tasks yet — add one above</p>
+  </div>
+</div>
+
+<!-- ================= ADD/EDIT MODAL ================= -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle" data-i18n="modalNewTitle">Add New Task</h3>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closeModal()" data-i18n="cancelBtn">Cancel</button>
+        <button class="btn-save" onclick="saveModalTask()" data-i18n="saveBtn">Save</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label data-i18n="mTitleLabel">Task Name</label>
+        <input type="text" id="mTitle" data-i18n-ph="mTitlePh" placeholder="e.g. Pay the electricity bill">
+      </div>
+      <div class="field">
+        <label data-i18n="mDetailsLabel">Details (Optional)</label>
+        <textarea id="mDetails" data-i18n-ph="mDetailsPh" placeholder="Any extra notes about this task..."></textarea>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label data-i18n="mCategoryLabel">Category</label>
+          <select id="mCategory">
+            <option value="work" data-i18n="catWork">Work</option>
+            <option value="personal" data-i18n="catPersonal">Personal</option>
+            <option value="trading" data-i18n="catTrading">Trading</option>
+            <option value="content" data-i18n="catContent">Content</option>
+            <option value="other" data-i18n="catOther">Other</option>
+          </select>
+        </div>
+        <div class="field">
+          <label data-i18n="mPriorityLabel">Priority</label>
+          <select id="mPriority">
+            <option value="high" data-i18n="prioHigh">High</option>
+            <option value="medium" selected data-i18n="prioMedium">Medium</option>
+            <option value="low" data-i18n="prioLow">Low</option>
+          </select>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="row2">
+        <div class="field">
+          <label data-i18n="mStartLabel">Start Date</label>
+          <input type="date" id="mStartDate">
+        </div>
+        <div class="field">
+          <label data-i18n="mStartTimeLabel">Start Time</label>
+          <input type="time" id="mStartTime">
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label data-i18n="mDueLabel">Due Date (Optional)</label>
+          <input type="date" id="mDueDate">
+        </div>
+        <div class="field">
+          <label data-i18n="mDueTimeLabel">Due Time</label>
+          <input type="time" id="mDueTime">
+        </div>
+      </div>
+      <p class="hint-text" data-i18n="dueTimeHint">Due time will be shown in 12-hour format (AM/PM) on the task card.</p>
+
+      <hr class="section-divider">
+
+      <div class="field">
+        <label data-i18n="mRepeatLabel">Repeat</label>
+        <select id="mRepeatType" onchange="updateRepeatFieldsVisibility()">
+          <option value="none" data-i18n="repeatNone">No Repeat</option>
+          <option value="weekly" data-i18n="repeatWeekly">Weekly</option>
+          <option value="monthly" data-i18n="repeatMonthly">Monthly (specific date)</option>
+          <option value="monthlyRange" data-i18n="repeatRange">Monthly (date range)</option>
+        </select>
+      </div>
+
+      <div class="field" id="repeatWeeklyField" style="display:none;">
+        <label data-i18n="repeatWeekdayLabel">Which day of the week?</label>
+        <select id="mRepeatWeekday">
+          <option value="0" data-i18n="daySun">Sunday</option>
+          <option value="1" data-i18n="dayMon">Monday</option>
+          <option value="2" data-i18n="dayTue">Tuesday</option>
+          <option value="3" data-i18n="dayWed">Wednesday</option>
+          <option value="4" data-i18n="dayThu">Thursday</option>
+          <option value="5" data-i18n="dayFri">Friday</option>
+          <option value="6" data-i18n="daySat">Saturday</option>
+        </select>
+      </div>
+
+      <div class="field" id="repeatMonthlyField" style="display:none;">
+        <label data-i18n="repeatDayLabel">Which date each month? (1-31)</label>
+        <input type="number" id="mRepeatDay" min="1" max="31" value="1">
+      </div>
+
+      <div class="row2" id="repeatRangeField" style="display:none;">
+        <div class="field">
+          <label data-i18n="repeatRangeStartLabel">Start Date (1-31)</label>
+          <input type="number" id="mRepeatRangeStart" min="1" max="31" value="1">
+        </div>
+        <div class="field">
+          <label data-i18n="repeatRangeEndLabel">Due Date (1-31)</label>
+          <input type="number" id="mRepeatRangeEnd" min="1" max="31" value="10">
+        </div>
+      </div>
+      <p class="hint-text" id="repeatRangeHint" style="display:none;" data-i18n="repeatRangeHint">This task will automatically appear in your pending list every month starting from the start date.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= SETTINGS MODAL ================= -->
+<div class="modal-backdrop" id="settingsBackdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 data-i18n="settingsTitle">Settings</h3>
+      <div class="modal-actions">
+        <button class="btn-save" onclick="closeSettingsModal()" data-i18n="closeBtn" style="flex:1;">Close</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="settings-section-title" data-i18n="generalSection">General</div>
+      <div class="settings-row">
+        <span class="label" data-i18n="languageLabel">Language</span>
+        <select id="langSelect" onchange="setLanguage(this.value)">
+          <option value="en">English</option>
+          <option value="bn">বাংলা</option>
+        </select>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="settings-section-title" data-i18n="headerSettingsTitle">Header Display</div>
+      <div class="settings-row">
+        <span class="label" data-i18n="prefShowDate">Show Date</span>
+        <div class="toggle-switch" id="toggleShowDate" onclick="toggleHeaderPref('showDate')"><div class="knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-i18n="prefShowWeekday">Show Weekday</span>
+        <div class="toggle-switch" id="toggleShowWeekday" onclick="toggleHeaderPref('showWeekday')"><div class="knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-i18n="prefShowWeek">Show Week Number</span>
+        <div class="toggle-switch" id="toggleShowWeek" onclick="toggleHeaderPref('showWeek')"><div class="knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-i18n="prefShowBangla">Show Bangla Date</span>
+        <div class="toggle-switch" id="toggleShowBangla" onclick="toggleHeaderPref('showBangla')"><div class="knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-i18n="prefShowHijri">Show Hijri (Arabic) Date</span>
+        <div class="toggle-switch" id="toggleShowHijri" onclick="toggleHeaderPref('showHijri')"><div class="knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-i18n="hijriSunsetLabel">Hijri date changes at (sunset)</span>
+        <input type="time" id="hijriSunsetInput" onchange="updateHijriSunset(this.value)" style="padding:7px 9px;border-radius:9px;border:1.5px solid var(--border);font-size:13px;">
+      </div>
+      <div class="settings-row">
+        <span class="label" data-i18n="hijriOffsetLabel">Adjust Hijri date (days)</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="icon-round" style="width:28px;height:28px;font-size:15px;" onclick="adjustHijriOffset(-1)">−</button>
+          <span id="hijriOffsetVal" class="num" style="min-width:22px;text-align:center;font-weight:700;">0</span>
+          <button class="icon-round" style="width:28px;height:28px;font-size:15px;" onclick="adjustHijriOffset(1)">+</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-i18n="prefShowClock">Show Live Clock</span>
+        <div class="toggle-switch" id="toggleShowClock" onclick="toggleHeaderPref('showClock')"><div class="knob"></div></div>
+      </div>
+      <div class="settings-row">
+        <span class="label" data-i18n="prefClock12h">Clock in 12-hour format</span>
+        <div class="toggle-switch" id="toggleClock12h" onclick="toggleHeaderPref('clock12h')"><div class="knob"></div></div>
+      </div>
+      <p class="hint-text" data-i18n="hijriHint">Hijri date is calculated (Umm al-Qura calendar) and may differ by a day from local moon-sighting announcements.</p>
+
+      <hr class="section-divider">
+
+      <div class="expandable-row" id="passwordToggleRow" onclick="togglePasswordForm()">
+        <div class="admin-user-name" data-i18n="changePassTitle">Change Password</div>
+        <span class="chev">▸</span>
+      </div>
+      <div id="passwordFormArea" style="display:none; padding-top:8px;">
+        <div class="field">
+          <label data-i18n="currentPassLabel">Current Password</label>
+          <input type="password" id="curPass" placeholder="••••••••">
+        </div>
+        <div class="field">
+          <label data-i18n="newPassLabel">New Password</label>
+          <input type="password" id="newPass" placeholder="••••••••">
+        </div>
+        <div class="field">
+          <label data-i18n="confirmPassLabel">Confirm New Password</label>
+          <input type="password" id="confirmPass" placeholder="••••••••">
+        </div>
+        <div class="auth-error" id="passError"></div>
+        <button class="btn-primary" onclick="handleChangePassword()" data-i18n="updatePassBtn">Update Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= ADMIN MODAL ================= -->
+<div class="modal-backdrop" id="adminBackdrop">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 data-i18n="adminTitle">Admin Panel</h3>
+      <div class="modal-actions">
+        <button class="btn-save" onclick="closeAdminModal()" data-i18n="closeBtn" style="flex:1;">Close</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p class="hint-text" data-i18n="adminHint">You can see login status and enable/disable accounts here. No one's task list — including yours — is visible to the admin.</p>
+      <div id="adminUserList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= CONFIRM MODAL ================= -->
+<div class="modal-backdrop" id="confirmBackdrop">
+  <div class="modal" style="max-width:340px;">
+    <div class="modal-head">
+      <h3 data-i18n="confirmTitle">Please Confirm</h3>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closeConfirm()" data-i18n="cancelBtn">Cancel</button>
+        <button class="btn-save" id="confirmYesBtn" onclick="confirmYesClicked()" data-i18n="confirmYes">Yes</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p id="confirmMsg" style="font-size:14.5px; color:var(--ink-soft); margin:0;"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   FIREBASE CONFIG — paste your own project config here.
+   Enable Email/Password auth + create a Firestore database.
+   Leave as-is to keep testing in Demo Mode (LocalStorage).
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDisVf4vMZ566L-6pjYafscTIlOkwCBzmg",
+  authDomain: "pendinglist-fabi.firebaseapp.com",
+  databaseURL: "https://pendinglist-fabi-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "pendinglist-fabi",
+  storageBucket: "pendinglist-fabi.firebasestorage.app",
+  messagingSenderId: "244657180032",
+  appId: "1:244657180032:web:9ec7558aea0965d5b60565"
+};
+
+let DEMO_MODE = firebaseConfig.apiKey === "YOUR_API_KEY";
+let auth, db, currentUser = null;
+
+if (!DEMO_MODE) {
+  try {
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+  } catch (e) {
+    console.error("Firebase init failed, falling back to demo mode:", e);
+    DEMO_MODE = true;
+  }
+}
+if (DEMO_MODE) document.getElementById('demoBadge').style.display = 'inline-block';
+
+/* ============================================================
+   I18N
+   ============================================================ */
+const I18N = {
+  en: {
+    authTagline: "By FaBi — your tasks, your control",
+    demoBadge: "⚡ Demo Mode (Firebase not configured)",
+    emailLabel: "Email", passLabel: "Password", nameLabel: "Name",
+    loginBtn: "Log In", signupBtn: "Create Account",
+    newHere: "New here?", createAccount: "Create an account",
+    haveAccount: "Already have an account?",
+    demoLink: "Or enter Demo Mode without logging in →",
+    logoutBtn: "Log Out", todayLabel: "Today",
+    greetLine: "Today's status", heroDefault: "Let's get organized!",
+    statTotal: "Total", statPending: "Pending", statDone: "Done", statOverdue: "Overdue",
+    quickAddPh: "Type a new task and press Enter...",
+    filterAll: "All", filterPending: "Pending", filterToday: "Today", filterOverdue: "Overdue", filterDone: "Done",
+    sortNew: "Sort: Newest first", sortDue: "Sort: Due date", sortPriority: "Sort: Priority",
+    exportPdf: "PDF Export", emptyText: "No tasks yet — add one above",
+    modalNewTitle: "Add New Task", modalEditTitle: "Edit Task",
+    mTitleLabel: "Task Name", mTitlePh: "e.g. Pay the electricity bill",
+    mDetailsLabel: "Details (Optional)", mDetailsPh: "Any extra notes about this task...",
+    mCategoryLabel: "Category", mPriorityLabel: "Priority",
+    catWork: "Work", catPersonal: "Personal", catTrading: "Trading", catContent: "Content", catOther: "Other",
+    prioHigh: "High", prioMedium: "Medium", prioLow: "Low",
+    mStartLabel: "Start Date", mStartTimeLabel: "Start Time",
+    mDueLabel: "Due Date (Optional)", mDueTimeLabel: "Due Time",
+    dueTimeHint: "Due time will be shown in 12-hour format (AM/PM) on the task card.",
+    mRepeatLabel: "Repeat",
+    repeatNone: "No Repeat", repeatWeekly: "Weekly", repeatMonthly: "Monthly (specific date)", repeatRange: "Monthly (date range)",
+    repeatWeekdayLabel: "Which day of the week?",
+    daySun:"Sunday", dayMon:"Monday", dayTue:"Tuesday", dayWed:"Wednesday", dayThu:"Thursday", dayFri:"Friday", daySat:"Saturday",
+    repeatDayLabel: "Which date each month? (1-31)",
+    repeatRangeStartLabel: "Start Date (1-31)", repeatRangeEndLabel: "Due Date (1-31)",
+    repeatRangeHint: "This task will automatically appear in your pending list every month starting from the start date.",
+    cancelBtn: "Cancel", saveBtn: "Save", closeBtn: "Close",
+    settingsTitle: "Settings", languageLabel: "Language", generalSection: "General",
+    headerSettingsTitle: "Header Display",
+    prefShowDate: "Show Date", prefShowWeekday: "Show Weekday", prefShowWeek: "Show Week Number",
+    prefShowBangla: "Show Bangla Date", prefShowHijri: "Show Hijri (Arabic) Date",
+    prefShowClock: "Show Live Clock", prefClock12h: "Clock in 12-hour format",
+    hijriSunsetLabel: "Hijri date changes at (sunset)", hijriOffsetLabel: "Adjust Hijri date (days)",
+    hijriHint: "Hijri date switches over at your set sunset time (not midnight) and can be nudged ± a day to match your local moon-sighting announcement.",
+    changePassTitle: "Change Password", currentPassLabel: "Current Password",
+    newPassLabel: "New Password", confirmPassLabel: "Confirm New Password", updatePassBtn: "Update Password",
+    adminTitle: "Admin Panel",
+    adminHint: "You can see login status and enable/disable accounts here. No one's task list — including yours — is visible to the admin.",
+    confirmTitle: "Please Confirm", confirmYes: "Yes",
+    confirmDoneMsg: "Mark this task as done?",
+    confirmUndoMsg: "Mark this task as pending again?",
+    confirmDeleteMsg: "Delete this task?",
+    demoPassNote: "Password change needs Firebase to be connected.",
+    demoAdminNote: "Connect Firebase to see and manage all real users here.",
+    passMismatch: "New password and confirm password don't match.",
+    passTooShort: "New password must be at least 6 characters.",
+    passUpdated: "Password updated successfully.",
+    dueLabel: "Due", overdueBy: "Overdue by", startLabel: "Start",
+    d: "d", h: "h", m: "m", left: "left",
+    accountCreated: "Registered", lastLogin: "Last login", never: "Never",
+    statusActive: "Active", statusDisabled: "Disabled", youLabel: "(You)",
+    disabledLoginMsg: "Your account has been disabled by the admin.",
+  },
+  bn: {
+    authTagline: "By FaBi — আপনার কাজ, আপনার হাতে",
+    demoBadge: "⚡ Demo Mode (Firebase কনফিগার করা নেই)",
+    emailLabel: "ইমেইল", passLabel: "পাসওয়ার্ড", nameLabel: "নাম",
+    loginBtn: "লগইন করুন", signupBtn: "অ্যাকাউন্ট তৈরি করুন",
+    newHere: "নতুন এখানে?", createAccount: "অ্যাকাউন্ট তৈরি করুন",
+    haveAccount: "আগে থেকেই অ্যাকাউন্ট আছে?",
+    demoLink: "অথবা লগইন ছাড়াই Demo Mode এ ঢুকুন →",
+    logoutBtn: "লগআউট", todayLabel: "আজকের তারিখ",
+    greetLine: "আজকের অবস্থা", heroDefault: "চলুন কাজ গোছাই!",
+    statTotal: "মোট", statPending: "পেন্ডিং", statDone: "সম্পন্ন", statOverdue: "Overdue",
+    quickAddPh: "নতুন কাজ লিখুন এবং Enter চাপুন...",
+    filterAll: "সব", filterPending: "পেন্ডিং", filterToday: "আজকের", filterOverdue: "Overdue", filterDone: "সম্পন্ন",
+    sortNew: "সাজান: নতুন আগে", sortDue: "সাজান: Due Date", sortPriority: "সাজান: Priority",
+    exportPdf: "PDF Export", emptyText: "কোনো কাজ নেই — উপরে থেকে একটা যোগ করুন",
+    modalNewTitle: "নতুন কাজ যোগ করুন", modalEditTitle: "কাজ এডিট করুন",
+    mTitleLabel: "কাজের নাম", mTitlePh: "যেমন: বিদ্যুৎ বিল পরিশোধ করা",
+    mDetailsLabel: "বিস্তারিত (ঐচ্ছিক)", mDetailsPh: "কাজ নিয়ে অতিরিক্ত কোনো নোট...",
+    mCategoryLabel: "Category", mPriorityLabel: "Priority",
+    catWork: "Work", catPersonal: "Personal", catTrading: "Trading", catContent: "Content", catOther: "Other",
+    prioHigh: "High", prioMedium: "Medium", prioLow: "Low",
+    mStartLabel: "শুরুর তারিখ", mStartTimeLabel: "শুরুর সময়",
+    mDueLabel: "Due Date (ঐচ্ছিক)", mDueTimeLabel: "Due Time",
+    dueTimeHint: "Due time কার্ডে 12-ঘণ্টা ফরম্যাটে (AM/PM) দেখানো হবে।",
+    mRepeatLabel: "Repeat",
+    repeatNone: "Repeat নেই", repeatWeekly: "সাপ্তাহিক", repeatMonthly: "মাসিক (নির্দিষ্ট তারিখ)", repeatRange: "মাসিক (তারিখের রেঞ্জ)",
+    repeatWeekdayLabel: "সপ্তাহের কোন দিন?",
+    daySun:"রবিবার", dayMon:"সোমবার", dayTue:"মঙ্গলবার", dayWed:"বুধবার", dayThu:"বৃহস্পতিবার", dayFri:"শুক্রবার", daySat:"শনিবার",
+    repeatDayLabel: "প্রতি মাসের কোন তারিখ? (1-31)",
+    repeatRangeStartLabel: "শুরুর তারিখ (1-31)", repeatRangeEndLabel: "Due তারিখ (1-31)",
+    repeatRangeHint: "এই কাজটি প্রতি মাসে শুরুর তারিখ থেকে অটো পেন্ডিং লিস্টে চলে আসবে।",
+    cancelBtn: "বাতিল", saveBtn: "সেভ করুন", closeBtn: "বন্ধ করুন",
+    settingsTitle: "Settings", languageLabel: "Language", generalSection: "General",
+    headerSettingsTitle: "Header Display",
+    prefShowDate: "Date দেখাবে", prefShowWeekday: "Weekday দেখাবে", prefShowWeek: "Week Number দেখাবে",
+    prefShowBangla: "বাংলা তারিখ দেখাবে", prefShowHijri: "হিজরি (আরবি) তারিখ দেখাবে",
+    prefShowClock: "Live Clock দেখাবে", prefClock12h: "Clock 12-ঘণ্টা ফরম্যাটে",
+    hijriSunsetLabel: "Hijri তারিখ পরিবর্তন হবে (সূর্যাস্ত)", hijriOffsetLabel: "Hijri তারিখ কমান/বাড়ান (দিন)",
+    hijriHint: "আপনার সেট করা সূর্যাস্তের সময়ে (মধ্যরাতে নয়) Hijri তারিখ পরিবর্তন হবে, আর স্থানীয় চাঁদ দেখার ঘোষণার সাথে মেলাতে ± ১ দিন adjust করা যাবে।",
+    changePassTitle: "পাসওয়ার্ড পরিবর্তন", currentPassLabel: "বর্তমান পাসওয়ার্ড",
+    newPassLabel: "নতুন পাসওয়ার্ড", confirmPassLabel: "নতুন পাসওয়ার্ড আবার লিখুন", updatePassBtn: "পাসওয়ার্ড আপডেট করুন",
+    adminTitle: "Admin Panel",
+    adminHint: "এখানে লগইন স্ট্যাটাস দেখতে ও অ্যাকাউন্ট Enable/Disable করতে পারবেন। কারো (নিজেরটাসহ) pending list দেখা যাবে না।",
+    confirmTitle: "নিশ্চিত করুন", confirmYes: "হ্যাঁ",
+    confirmDoneMsg: "কাজটি সম্পন্ন হিসেবে চিহ্নিত করবেন?",
+    confirmUndoMsg: "কাজটি আবার পেন্ডিং করবেন?",
+    confirmDeleteMsg: "এই কাজটি ডিলিট করতে চান?",
+    demoPassNote: "পাসওয়ার্ড পরিবর্তনের জন্য Firebase কানেক্ট করতে হবে।",
+    demoAdminNote: "প্রকৃত ইউজারদের দেখতে ও ম্যানেজ করতে Firebase কানেক্ট করুন।",
+    passMismatch: "নতুন পাসওয়ার্ড দুটো মিলছে না।",
+    passTooShort: "নতুন পাসওয়ার্ড কমপক্ষে ৬ ক্যারেক্টার হতে হবে।",
+    passUpdated: "পাসওয়ার্ড সফলভাবে আপডেট হয়েছে।",
+    dueLabel: "Due", overdueBy: "Overdue by", startLabel: "Start",
+    d: "দিন", h: "ঘ", m: "মি", left: "বাকি",
+    accountCreated: "রেজিস্ট্রেশন", lastLogin: "সর্বশেষ লগইন", never: "কখনও না",
+    statusActive: "Active", statusDisabled: "Disabled", youLabel: "(আপনি)",
+    disabledLoginMsg: "আপনার অ্যাকাউন্ট admin দ্বারা disable করা হয়েছে।",
+  }
+};
+let currentLang = localStorage.getItem('pendinglist_lang') || 'en';
+function t(key){ return (I18N[currentLang] && I18N[currentLang][key]) || I18N.en[key] || key; }
+
+function applyI18n(){
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.getAttribute('data-i18n')); });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el => { el.placeholder = t(el.getAttribute('data-i18n-ph')); });
+  const langSelect = document.getElementById('langSelect');
+  if (langSelect) langSelect.value = currentLang;
+  if (document.getElementById('appScreen').style.display === 'block') { render(); updateHeaderClock(); }
+}
+function setLanguage(lang){ currentLang = lang; localStorage.setItem('pendinglist_lang', lang); applyI18n(); }
+
+/* ---------------- State ---------------- */
+let tasks = [];
+let currentFilter = 'all';
+let editingTaskId = null;
+let expandedDetails = new Set();
+
+const CATEGORY_META = {
+  work:     { key:'catWork',     color: '#6C5CE7', bg: 'rgba(108,92,231,0.12)' },
+  personal: { key:'catPersonal', color: '#00B8A9', bg: 'rgba(0,184,169,0.12)' },
+  trading:  { key:'catTrading',  color: '#FFC145', bg: 'rgba(255,193,69,0.18)' },
+  content:  { key:'catContent',  color: '#FF6B6B', bg: 'rgba(255,107,107,0.12)' },
+  other:    { key:'catOther',    color: '#8073F0', bg: 'rgba(128,115,240,0.12)' },
+};
+const PRIORITY_META = {
+  high:   { key:'prioHigh',   color: '#D64545' },
+  medium: { key:'prioMedium', color: '#FFC145' },
+  low:    { key:'prioLow',    color: '#00B8A9' },
+};
+
+/* ---------------- Header Display Preferences ---------------- */
+let headerPrefs = Object.assign(
+  { showDate:true, showWeekday:true, showWeek:true, showBangla:true, showHijri:true, showClock:true, clock12h:true },
+  JSON.parse(localStorage.getItem('pendinglist_header_prefs') || '{}')
+);
+function saveHeaderPrefs(){ localStorage.setItem('pendinglist_header_prefs', JSON.stringify(headerPrefs)); }
+
+let hijriPrefs = Object.assign(
+  { sunsetTime: '18:00', offsetDays: 0 },
+  JSON.parse(localStorage.getItem('pendinglist_hijri_prefs') || '{}')
+);
+function saveHijriPrefs(){ localStorage.setItem('pendinglist_hijri_prefs', JSON.stringify(hijriPrefs)); }
+function updateHijriSunset(val){ hijriPrefs.sunsetTime = val || '18:00'; saveHijriPrefs(); updateHeaderClock(); }
+function adjustHijriOffset(delta){
+  hijriPrefs.offsetDays = Math.max(-3, Math.min(3, (hijriPrefs.offsetDays || 0) + delta));
+  saveHijriPrefs();
+  updateHeaderClock();
+  const el = document.getElementById('hijriOffsetVal');
+  if (el) el.textContent = (hijriPrefs.offsetDays > 0 ? '+' : '') + hijriPrefs.offsetDays;
+}
+function toggleHeaderPref(key){
+  headerPrefs[key] = !headerPrefs[key];
+  saveHeaderPrefs();
+  updateHeaderClock();
+  syncSettingsToggles();
+}
+function syncSettingsToggles(){
+  const map = { showDate:'toggleShowDate', showWeekday:'toggleShowWeekday', showWeek:'toggleShowWeek',
+    showBangla:'toggleShowBangla', showHijri:'toggleShowHijri', showClock:'toggleShowClock', clock12h:'toggleClock12h' };
+  Object.keys(map).forEach(k => {
+    const el = document.getElementById(map[k]);
+    if (el) el.classList.toggle('on', !!headerPrefs[k]);
+  });
+}
+
+function getWeekNumber(d){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+/* Bangla calendar — revised (2019) fixed-length calendar used in Bangladesh.
+   Boishakh 1 always falls on April 14 (Gregorian). */
+function getBanglaDate(rawDate){
+  // Normalize to local midnight first — using the raw time-of-day value here caused
+  // Math.round() to occasionally round the day-count up, showing tomorrow's date.
+  const date = new Date(rawDate.getFullYear(), rawDate.getMonth(), rawDate.getDate());
+  const banglaMonths = ['Boishakh','Joishtho','Asharh','Srabon','Bhadro','Ashwin','Kartik','Ogrohayon','Poush','Magh','Falgun','Choitro'];
+  const y = date.getFullYear();
+  let bStartGregYear = y;
+  const boishakh1ThisYear = new Date(y, 3, 14);
+  if (date < boishakh1ThisYear) bStartGregYear = y - 1;
+  const startDate = new Date(bStartGregYear, 3, 14);
+  const banglaYear = bStartGregYear - 593;
+  const diffDays = Math.round((date - startDate) / 86400000);
+  const secondGregYear = bStartGregYear + 1;
+  const isLeap = (secondGregYear % 4 === 0 && secondGregYear % 100 !== 0) || (secondGregYear % 400 === 0);
+  const monthLengths = [31,31,31,31,31,30,30,30,30,30,30, isLeap ? 31 : 30];
+  let remaining = diffDays, mi = 0;
+  while (mi < 12 && remaining >= monthLengths[mi]) { remaining -= monthLengths[mi]; mi++; }
+  if (mi > 11) mi = 11;
+  return `${remaining + 1}-${banglaMonths[mi]}-${banglaYear}`;
+}
+
+/* Hijri (Arabic/Islamic) date — calculated via the Umm al-Qura calendar (browser Intl).
+   This is the standard calculated approximation; true moon-sighting dates can vary by ~1 day. */
+function getHijriDate(rawDate){
+  // The Islamic calendar day begins at sunset, not midnight — so after the configured
+  // sunset time, we've already moved into the next Islamic day. A manual offset is also
+  // available in Settings since the calculated (Umm al-Qura) calendar can differ by a
+  // day from a given location's actual moon-sighting announcement.
+  let effectiveDate = new Date(rawDate.getFullYear(), rawDate.getMonth(), rawDate.getDate());
+  const [sh, sm] = (hijriPrefs.sunsetTime || '18:00').split(':').map(Number);
+  const sunsetToday = new Date(rawDate.getFullYear(), rawDate.getMonth(), rawDate.getDate(), sh || 0, sm || 0, 0, 0);
+  if (rawDate >= sunsetToday) effectiveDate.setDate(effectiveDate.getDate() + 1);
+  effectiveDate.setDate(effectiveDate.getDate() + (hijriPrefs.offsetDays || 0));
+
+  try {
+    const fmt = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { day:'numeric', month:'numeric', year:'numeric' });
+    const parts = fmt.formatToParts(effectiveDate);
+    const day = parts.find(p => p.type === 'day').value;
+    const month = parts.find(p => p.type === 'month').value;
+    const year = parts.find(p => p.type === 'year').value;
+    const hijriMonths = ['Muharram','Safor','Rabiul Awal','Rabiul Sani','Jamadiul Awal','Jamadiul Sani','Rajab','Shaban','Ramadan','Shawal','Zilkod','Zilhajj'];
+    return `${day}-${hijriMonths[parseInt(month,10)-1]}-${year}`;
+  } catch (e) {
+    return '';
+  }
+}
+
+function updateHeaderClock(){
+  const now = new Date();
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const weekdaysFull = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const dd = String(now.getDate()).padStart(2,'0');
+  const mon = months[now.getMonth()];
+  const yyyy = now.getFullYear();
+  const wd = weekdaysFull[now.getDay()];
+  const wk = String(getWeekNumber(now)).padStart(2,'0');
+
+  const parts = [];
+  if (headerPrefs.showWeekday) parts.push(wd);
+  if (headerPrefs.showWeek) parts.push(`WK-${wk}`);
+  if (headerPrefs.showDate) parts.push(`${dd}-${mon}-${yyyy}`);
+  if (headerPrefs.showBangla) parts.push(getBanglaDate(now));
+  if (headerPrefs.showHijri) parts.push(getHijriDate(now));
+  const dateEl = document.getElementById('headerDate');
+  dateEl.textContent = parts.filter(Boolean).join(' │ ');
+  dateEl.style.display = parts.length ? 'inline' : 'none';
+
+  const timeEl = document.getElementById('headerTime');
+  if (headerPrefs.showClock) {
+    timeEl.style.display = 'inline';
+    if (headerPrefs.clock12h) {
+      let h = now.getHours(); const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12; if (h === 0) h = 12;
+      timeEl.textContent = `${String(h).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')} ${ampm}`;
+    } else {
+      timeEl.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+  } else {
+    timeEl.style.display = 'none';
+  }
+}
+setInterval(updateHeaderClock, 1000);
+updateHeaderClock();
+
+/* ---------------- Custom Confirm Modal ---------------- */
+let confirmCallback = null;
+function showConfirm(msg, onYes){
+  document.getElementById('confirmMsg').textContent = msg;
+  confirmCallback = onYes;
+  document.getElementById('confirmBackdrop').style.display = 'flex';
+}
+function closeConfirm(){ document.getElementById('confirmBackdrop').style.display = 'none'; confirmCallback = null; }
+function confirmYesClicked(){ const cb = confirmCallback; closeConfirm(); if (cb) cb(); }
+
+/* ---------------- Auth ---------------- */
+function toggleAuthMode(){
+  const l = document.getElementById('loginForm');
+  const s = document.getElementById('signupForm');
+  l.style.display = l.style.display === 'none' ? 'block' : 'none';
+  s.style.display = s.style.display === 'none' ? 'block' : 'none';
+  hideAuthError();
+}
+function showAuthError(msg){ const el = document.getElementById('authError'); el.textContent = msg; el.style.display = 'block'; }
+function hideAuthError(){ document.getElementById('authError').style.display = 'none'; }
+
+function handleLogin(){
+  hideAuthError();
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  if(!email || !pass){ showAuthError(t('emailLabel') + ' & ' + t('passLabel')); return; }
+  if(DEMO_MODE){ showAuthError('Demo Mode: use the Demo button below'); return; }
+
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(async cred => {
+      const uid = cred.user.uid;
+      const userDoc = await db.collection('users').doc(uid).get();
+      if (userDoc.exists && userDoc.data().disabled) {
+        await auth.signOut();
+        showAuthError(t('disabledLoginMsg'));
+        return;
+      }
+      await db.collection('users').doc(uid).set({ lastLoginAt: Date.now() }, { merge: true });
+    })
+    .catch(e => showAuthError(friendlyAuthError(e)));
+}
+function handleSignup(){
+  hideAuthError();
+  const name = document.getElementById('signupName').value.trim();
+  const email = document.getElementById('signupEmail').value.trim();
+  const pass = document.getElementById('signupPass').value;
+  if(!name || !email || !pass){ showAuthError('Please fill in all fields'); return; }
+  if(DEMO_MODE){ showAuthError('Demo Mode: use the Demo button below'); return; }
+
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(async cred => {
+      await cred.user.updateProfile({ displayName: name });
+      await db.collection('users').doc(cred.user.uid).set({
+        uid: cred.user.uid, name, email, role: 'user', disabled: false,
+        createdAt: Date.now(), lastLoginAt: Date.now()
+      });
+    })
+    .catch(e => showAuthError(friendlyAuthError(e)));
+}
+function friendlyAuthError(e){
+  const map = {
+    'auth/user-not-found': 'No account found with this email',
+    'auth/wrong-password': 'Incorrect password',
+    'auth/email-already-in-use': 'An account already exists with this email',
+    'auth/weak-password': 'Password must be at least 6 characters',
+    'auth/invalid-email': 'Please enter a valid email',
+  };
+  return map[e.code] || e.message;
+}
+function handleLogout(){
+  if(DEMO_MODE || (currentUser && currentUser.isDemo)){
+    currentUser = null;
+    document.getElementById('appScreen').style.display = 'none';
+    document.getElementById('authScreen').style.display = 'flex';
+    return;
+  }
+  auth.signOut();
+}
+function enterDemoMode(){
+  currentUser = { uid: 'demo-user', displayName: 'FaBi', email: 'demo@fabi.dev', isDemo: true, role: 'admin' };
+  enterApp();
+}
+
+if (!DEMO_MODE) {
+  auth.onAuthStateChanged(async user => {
+    if (user) {
+      currentUser = user;
+      const userDoc = await db.collection('users').doc(user.uid).get();
+      currentUser.role = userDoc.exists ? (userDoc.data().role || 'user') : 'user';
+      currentUser.createdAt = userDoc.exists ? userDoc.data().createdAt : Date.now();
+      enterApp();
+    } else {
+      currentUser = null;
+      document.getElementById('appScreen').style.display = 'none';
+      document.getElementById('authScreen').style.display = 'flex';
+    }
+  });
+}
+
+function enterApp(){
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  const name = currentUser.displayName || currentUser.email || 'FaBi';
+  document.getElementById('userName').firstChild.textContent = name;
+  document.getElementById('avatarInitial').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('demoTag').style.display = currentUser.isDemo ? 'inline' : 'none';
+  document.getElementById('adminTag').style.display = currentUser.role === 'admin' ? 'inline' : 'none';
+  document.getElementById('adminBtn').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
+  document.getElementById('quickAddInput').addEventListener('keydown', e => { if (e.key === 'Enter') quickAdd(); });
+  applyI18n();
+  loadTasks();
+}
+
+/* ---------------- Data Layer (Firestore or LocalStorage) ---------------- */
+function localKey(){ return 'pendinglist_tasks_' + (currentUser ? currentUser.uid : 'guest'); }
+
+function loadTasks(){
+  if (DEMO_MODE || currentUser.isDemo) {
+    tasks = JSON.parse(localStorage.getItem(localKey()) || '[]');
+    render();
+  } else {
+    db.collection('tasks').where('uid', '==', currentUser.uid)
+      .onSnapshot(snap => { tasks = snap.docs.map(d => ({ id: d.id, ...d.data() })); render(); },
+        err => console.error(err));
+  }
+}
+function persistLocal(){ localStorage.setItem(localKey(), JSON.stringify(tasks)); }
+
+function addTaskRecord(data){
+  const record = { ...data, uid: currentUser.uid, done: false, createdAt: Date.now() };
+  if (DEMO_MODE || currentUser.isDemo) {
+    record.id = 'local_' + Date.now();
+    tasks.unshift(record);
+    persistLocal();
+    render();
+  } else {
+    db.collection('tasks').add(record);
+  }
+}
+function updateTaskRecord(id, patch){
+  if (DEMO_MODE || currentUser.isDemo) {
+    const tk = tasks.find(x => x.id === id);
+    if (tk) Object.assign(tk, patch);
+    persistLocal();
+    render();
+  } else {
+    db.collection('tasks').doc(id).update(patch);
+  }
+}
+function deleteTaskRecord(id){
+  if (DEMO_MODE || currentUser.isDemo) {
+    tasks = tasks.filter(x => x.id !== id);
+    persistLocal();
+    render();
+  } else {
+    db.collection('tasks').doc(id).delete();
+  }
+}
+
+/* ---------------- Quick Add ---------------- */
+function quickAdd(){
+  const input = document.getElementById('quickAddInput');
+  const title = input.value.trim();
+  if(!title) return;
+  const now = new Date();
+  addTaskRecord({
+    title, details: '', category: 'other', priority: 'medium',
+    startDate: isoDate(now), startTime: isoTime(now),
+    dueDate: null, dueTime: null, repeatType: 'none'
+  });
+  input.value = '';
+}
+
+/* ---------------- Modal (full add/edit) ---------------- */
+function isoDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+function isoTime(d){ return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+
+function updateRepeatFieldsVisibility(){
+  const val = document.getElementById('mRepeatType').value;
+  document.getElementById('repeatWeeklyField').style.display = val === 'weekly' ? 'block' : 'none';
+  document.getElementById('repeatMonthlyField').style.display = val === 'monthly' ? 'block' : 'none';
+  document.getElementById('repeatRangeField').style.display = val === 'monthlyRange' ? 'flex' : 'none';
+  document.getElementById('repeatRangeHint').style.display = val === 'monthlyRange' ? 'block' : 'none';
+}
+
+function openModal(taskId){
+  editingTaskId = taskId || null;
+  document.getElementById('modalTitle').textContent = taskId ? t('modalEditTitle') : t('modalNewTitle');
+  const now = new Date();
+
+  if (taskId) {
+    const tk = tasks.find(x => x.id === taskId);
+    document.getElementById('mTitle').value = tk.title;
+    document.getElementById('mDetails').value = tk.details || '';
+    document.getElementById('mCategory').value = tk.category;
+    document.getElementById('mPriority').value = tk.priority;
+    document.getElementById('mStartDate').value = tk.startDate || isoDate(now);
+    document.getElementById('mStartTime').value = tk.startTime || isoTime(now);
+    document.getElementById('mDueDate').value = tk.dueDate || '';
+    document.getElementById('mDueTime').value = tk.dueTime || '';
+    document.getElementById('mRepeatType').value = tk.repeatType || 'none';
+    document.getElementById('mRepeatWeekday').value = tk.repeatWeekday ?? 1;
+    document.getElementById('mRepeatDay').value = tk.repeatDay ?? 1;
+    document.getElementById('mRepeatRangeStart').value = tk.repeatRangeStart ?? 1;
+    document.getElementById('mRepeatRangeEnd').value = tk.repeatRangeEnd ?? 10;
+  } else {
+    document.getElementById('mTitle').value = '';
+    document.getElementById('mDetails').value = '';
+    document.getElementById('mCategory').value = 'work';
+    document.getElementById('mPriority').value = 'medium';
+    document.getElementById('mStartDate').value = isoDate(now);
+    document.getElementById('mStartTime').value = isoTime(now);
+    document.getElementById('mDueDate').value = '';
+    document.getElementById('mDueTime').value = '';
+    document.getElementById('mRepeatType').value = 'none';
+    document.getElementById('mRepeatWeekday').value = 1;
+    document.getElementById('mRepeatDay').value = 1;
+    document.getElementById('mRepeatRangeStart').value = 1;
+    document.getElementById('mRepeatRangeEnd').value = 10;
+  }
+  updateRepeatFieldsVisibility();
+  document.getElementById('modalBackdrop').style.display = 'flex';
+}
+function closeModal(){ document.getElementById('modalBackdrop').style.display = 'none'; }
+
+function saveModalTask(){
+  const title = document.getElementById('mTitle').value.trim();
+  if(!title){ document.getElementById('mTitle').focus(); return; }
+  const data = {
+    title,
+    details: document.getElementById('mDetails').value.trim(),
+    category: document.getElementById('mCategory').value,
+    priority: document.getElementById('mPriority').value,
+    startDate: document.getElementById('mStartDate').value || isoDate(new Date()),
+    startTime: document.getElementById('mStartTime').value || isoTime(new Date()),
+    dueDate: document.getElementById('mDueDate').value || null,
+    dueTime: document.getElementById('mDueTime').value || null,
+    repeatType: document.getElementById('mRepeatType').value,
+    repeatWeekday: parseInt(document.getElementById('mRepeatWeekday').value, 10),
+    repeatDay: parseInt(document.getElementById('mRepeatDay').value, 10),
+    repeatRangeStart: parseInt(document.getElementById('mRepeatRangeStart').value, 10),
+    repeatRangeEnd: parseInt(document.getElementById('mRepeatRangeEnd').value, 10),
+  };
+  if (editingTaskId) updateTaskRecord(editingTaskId, data);
+  else addTaskRecord(data);
+  closeModal();
+}
+
+/* ---------------- Toggle / Delete (custom confirmation on Done) ---------------- */
+function toggleDone(id){
+  const tk = tasks.find(x => x.id === id);
+  if (!tk) return;
+  const eff = getEffectiveState(tk);
+  if (!eff.done) {
+    showConfirm(t('confirmDoneMsg'), () => {
+      if (tk.repeatType && tk.repeatType !== 'none') updateTaskRecord(id, { lastCompletedPeriod: eff.periodKey });
+      else updateTaskRecord(id, { done: true });
+    });
+  } else {
+    showConfirm(t('confirmUndoMsg'), () => {
+      if (tk.repeatType && tk.repeatType !== 'none') updateTaskRecord(id, { lastCompletedPeriod: null });
+      else updateTaskRecord(id, { done: false });
+    });
+  }
+}
+function deleteTask(id){ showConfirm(t('confirmDeleteMsg'), () => deleteTaskRecord(id)); }
+
+function toggleDetailsExpand(id){
+  if (expandedDetails.has(id)) expandedDetails.delete(id); else expandedDetails.add(id);
+  render();
+}
+
+/* ---------------- Repeating task logic ---------------- */
+function getPeriodInfo(task, now){
+  now = now || new Date();
+  if (task.repeatType === 'weekly') {
+    const day = now.getDay();
+    const diff = task.repeatWeekday - day;
+    const occ = new Date(now); occ.setHours(23,59,0,0); occ.setDate(now.getDate() + diff);
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - day);
+    const periodKey = `w-${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
+    return { periodKey, due: occ, activeFrom: null };
+  }
+  if (task.repeatType === 'monthly') {
+    const y = now.getFullYear(), m = now.getMonth();
+    const due = new Date(y, m, task.repeatDay, 23, 59, 0, 0);
+    return { periodKey: `m-${y}-${m}`, due, activeFrom: null };
+  }
+  if (task.repeatType === 'monthlyRange') {
+    const y = now.getFullYear(), m = now.getMonth();
+    const due = new Date(y, m, task.repeatRangeEnd, 23, 59, 0, 0);
+    const activeFrom = new Date(y, m, task.repeatRangeStart, 0, 0, 0, 0);
+    return { periodKey: `r-${y}-${m}`, due, activeFrom };
+  }
+  return null;
+}
+
+function getEffectiveState(task){
+  const now = new Date();
+  if (task.repeatType && task.repeatType !== 'none') {
+    const info = getPeriodInfo(task, now);
+    const active = !info.activeFrom || now >= info.activeFrom;
+    const done = task.lastCompletedPeriod === info.periodKey;
+    return { due: info.due, done, active, periodKey: info.periodKey, repeating: true };
+  }
+  let due = null;
+  if (task.dueDate) {
+    const [hh, mm] = (task.dueTime || '23:59').split(':').map(Number);
+    due = new Date(task.dueDate); due.setHours(hh, mm, 0, 0);
+  }
+  return { due, done: !!task.done, active: true, periodKey: null, repeating: false };
+}
+
+/* ---------------- Filters & Sort ---------------- */
+function setFilter(f){
+  currentFilter = f;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  render();
+}
+function todayStr(){ return isoDate(new Date()); }
+
+function getFilteredSorted(){
+  const now = new Date();
+  let list = tasks
+    .map(tk => ({ task: tk, eff: getEffectiveState(tk) }))
+    .filter(x => x.eff.active);
+
+  const isOverdueX = x => x.eff.due && !x.eff.done && x.eff.due < now;
+  const isTodayX = x => x.eff.due && !x.eff.done && isoDate(x.eff.due) === todayStr();
+
+  if (currentFilter === 'pending') list = list.filter(x => !x.eff.done);
+  if (currentFilter === 'done') list = list.filter(x => x.eff.done);
+  if (currentFilter === 'today') list = list.filter(isTodayX);
+  if (currentFilter === 'overdue') list = list.filter(isOverdueX);
+
+  const sortBy = document.getElementById('sortSelect').value;
+  const prioRank = { high: 0, medium: 1, low: 2 };
+  if (sortBy === 'due') {
+    list.sort((a,b) => {
+      const ad = a.eff.due ? a.eff.due.getTime() : Infinity;
+      const bd = b.eff.due ? b.eff.due.getTime() : Infinity;
+      return ad - bd;
+    });
+  } else if (sortBy === 'priority') {
+    list.sort((a,b) => prioRank[a.task.priority] - prioRank[b.task.priority]);
+  } else {
+    list.sort((a,b) => (b.task.createdAt||0) - (a.task.createdAt||0));
+  }
+  return list;
+}
+
+/* ---------------- Countdown / time formatting ---------------- */
+function formatCountdown(due, done){
+  if (!due || done) return null;
+  const now = new Date();
+  const diffMs = due.getTime() - now.getTime();
+  const late = diffMs < 0;
+  const abs = Math.abs(diffMs);
+  const dd = Math.floor(abs / (1000*60*60*24));
+  const hh = Math.floor((abs % (1000*60*60*24)) / (1000*60*60));
+  const mm = Math.floor((abs % (1000*60*60)) / (1000*60));
+  const parts = [];
+  if (dd > 0) parts.push(`${dd}${t('d')}`);
+  parts.push(`${hh}${t('h')}`);
+  parts.push(`${mm}${t('m')}`);
+  const text = parts.join(' ');
+  return late ? `${t('overdueBy')} ${text}` : `${text} ${t('left')}`;
+}
+function formatTime12h(hhmm){
+  if (!hhmm) return '';
+  let [h, m] = hhmm.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+/* ---------------- Render ---------------- */
+function render(){
+  const grid = document.getElementById('taskGrid');
+  const list = getFilteredSorted();
+  grid.innerHTML = '';
+  document.getElementById('emptyState').style.display = list.length ? 'none' : 'block';
+
+  list.forEach(({task: tk, eff}) => {
+    const cat = CATEGORY_META[tk.category] || CATEGORY_META.other;
+    const prio = PRIORITY_META[tk.priority] || PRIORITY_META.medium;
+    const now = new Date();
+    const overdue = eff.due && !eff.done && eff.due < now;
+    const countdown = formatCountdown(eff.due, eff.done);
+
+    const startHtml = tk.startDate
+      ? `<span class="tag start">🕐 ${t('startLabel')}: ${tk.startDate}${tk.startTime ? ' · ' + formatTime12h(tk.startTime) : ''}</span>` : '';
+
+    let dueTagHtml = '';
+    if (eff.due) {
+      const dateStr = isoDate(eff.due);
+      const timeStr = (tk.repeatType && tk.repeatType !== 'none') ? '' : (tk.dueTime ? ' · ' + formatTime12h(tk.dueTime) : '');
+      dueTagHtml = `<span class="tag due ${overdue ? 'overdue' : ''}">${overdue ? '⚠ ' : '📅 '}${t('dueLabel')}: ${dateStr}${timeStr}</span>`;
+    }
+    const countdownHtml = countdown ? `<span class="tag countdown ${overdue ? 'late' : ''}">${countdown}</span>` : '';
+    let repeatHtml = '';
+    if (tk.repeatType === 'weekly') repeatHtml = `<span class="tag repeat">🔁 ${t('repeatWeekly')}</span>`;
+    if (tk.repeatType === 'monthly') repeatHtml = `<span class="tag repeat">🔁 ${t('repeatMonthly')}</span>`;
+    if (tk.repeatType === 'monthlyRange') repeatHtml = `<span class="tag repeat">🔁 ${t('repeatRange')}</span>`;
+
+    const isExpanded = expandedDetails.has(tk.id);
+    const detailsHtml = tk.details
+      ? `<div class="t-details ${isExpanded ? 'expanded' : ''}" onclick="toggleDetailsExpand('${tk.id}')">${escapeHtml(tk.details)}</div>` : '';
+
+    const card = document.createElement('div');
+    card.className = 'task-card' + (eff.done ? ' done' : '');
+    card.style.setProperty('--cat-color', cat.color);
+    card.style.setProperty('--cat-bg', cat.bg);
+    card.innerHTML = `
+      <div class="check ${eff.done ? 'checked' : ''}" onclick="toggleDone('${tk.id}')">${eff.done ? '✓' : ''}</div>
+      <div class="t-body">
+        <div class="t-title">${escapeHtml(tk.title)}</div>
+        ${detailsHtml}
+        <div class="t-meta">
+          <span class="tag cat">${t(cat.key)}</span>
+          <span class="tag"><span class="prio-dot" style="background:${prio.color}"></span>${t(prio.key)}</span>
+          ${startHtml}
+          ${dueTagHtml}
+          ${countdownHtml}
+          ${repeatHtml}
+        </div>
+      </div>
+      <div class="t-actions">
+        <div class="icon-btn" onclick="openModal('${tk.id}')">✎</div>
+        <div class="icon-btn del" onclick="deleteTask('${tk.id}')">🗑</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  updateStats();
+}
+function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+/* ---------------- Stats ---------------- */
+function updateStats(){
+  const all = tasks.map(tk => ({ task: tk, eff: getEffectiveState(tk) })).filter(x => x.eff.active);
+  const now = new Date();
+  const total = all.length;
+  const done = all.filter(x => x.eff.done).length;
+  const pending = total - done;
+  const overdue = all.filter(x => x.eff.due && !x.eff.done && x.eff.due < now).length;
+  const pct = total ? Math.round((done/total)*100) : 0;
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPending').textContent = pending;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statOverdue').textContent = overdue;
+
+  const circumference = 94.2;
+  document.getElementById('ringProgress').style.strokeDashoffset = circumference - (circumference * pct/100);
+  document.getElementById('ringPct').textContent = pct + '%';
+
+  document.getElementById('heroSub').textContent =
+    total === 0 ? (currentLang === 'bn' ? 'এখনও কোনো কাজ যোগ করা হয়নি' : 'No tasks added yet')
+                : (currentLang === 'bn' ? `${pending} টি কাজ পেন্ডিং, ${done} টি সম্পন্ন` : `${pending} pending, ${done} done`);
+  document.getElementById('heroLine').textContent =
+    overdue > 0 ? (currentLang === 'bn' ? `${overdue} টি কাজ Overdue!` : `${overdue} task(s) overdue!`)
+    : (pending === 0 && total > 0 ? (currentLang === 'bn' ? 'সব কাজ শেষ! 🎉' : 'All done! 🎉') : t('heroDefault'));
+}
+
+/* ---------------- PDF Export ---------------- */
+function exportPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const name = currentUser.displayName || currentUser.email || 'FaBi';
+  const all = tasks.map(tk => ({ task: tk, eff: getEffectiveState(tk) })).filter(x => x.eff.active);
+
+  doc.setFontSize(18);
+  doc.text('PendingList — By FaBi', 14, 18);
+  doc.setFontSize(10);
+  doc.text(`User: ${name}   |   Date: ${todayStr()}`, 14, 25);
+
+  const pending = all.filter(x => !x.eff.done);
+  const done = all.filter(x => x.eff.done);
+
+  let y = 36;
+  doc.setFontSize(13);
+  doc.text(`Pending Tasks (${pending.length})`, 14, y); y += 7;
+  doc.setFontSize(10);
+  pending.forEach(x => {
+    const tk = x.task;
+    const cat = CATEGORY_META[tk.category]?.key ? t(CATEGORY_META[tk.category].key) : 'Other';
+    const prio = PRIORITY_META[tk.priority]?.key ? t(PRIORITY_META[tk.priority].key) : 'Medium';
+    const due = x.eff.due ? `  |  Due: ${isoDate(x.eff.due)}` : '';
+    const line = `- ${tk.title}  [${cat} / ${prio}]${due}`;
+    const split = doc.splitTextToSize(line, 180);
+    doc.text(split, 14, y); y += split.length * 5.5;
+    if (y > 275) { doc.addPage(); y = 20; }
+  });
+
+  y += 6;
+  doc.setFontSize(13);
+  doc.text(`Completed Tasks (${done.length})`, 14, y); y += 7;
+  doc.setFontSize(10);
+  done.forEach(x => {
+    const line = `- ${x.task.title}`;
+    const split = doc.splitTextToSize(line, 180);
+    doc.text(split, 14, y); y += split.length * 5.5;
+    if (y > 275) { doc.addPage(); y = 20; }
+  });
+
+  doc.save(`PendingList_${todayStr()}.pdf`);
+}
+
+/* ---------------- Settings Modal ---------------- */
+function openSettingsModal(){
+  document.getElementById('passError').style.display = 'none';
+  document.getElementById('curPass').value = '';
+  document.getElementById('newPass').value = '';
+  document.getElementById('confirmPass').value = '';
+  document.getElementById('passwordFormArea').style.display = 'none';
+  document.getElementById('passwordToggleRow').classList.remove('open');
+  document.getElementById('passwordToggleRow').querySelector('.chev').textContent = '▸';
+
+  syncSettingsToggles();
+  document.getElementById('hijriSunsetInput').value = hijriPrefs.sunsetTime || '18:00';
+  document.getElementById('hijriOffsetVal').textContent = (hijriPrefs.offsetDays > 0 ? '+' : '') + (hijriPrefs.offsetDays || 0);
+  applyI18n();
+  document.getElementById('settingsBackdrop').style.display = 'flex';
+}
+function closeSettingsModal(){ document.getElementById('settingsBackdrop').style.display = 'none'; }
+
+function togglePasswordForm(){
+  const el = document.getElementById('passwordFormArea');
+  const row = document.getElementById('passwordToggleRow');
+  const isOpen = el.style.display === 'block';
+  el.style.display = isOpen ? 'none' : 'block';
+  row.classList.toggle('open', !isOpen);
+  row.querySelector('.chev').textContent = isOpen ? '▸' : '▾';
+}
+
+function handleChangePassword(){
+  const err = document.getElementById('passError');
+  err.style.display = 'none';
+  if (DEMO_MODE || currentUser.isDemo) { err.textContent = t('demoPassNote'); err.style.display = 'block'; return; }
+
+  const curPass = document.getElementById('curPass').value;
+  const newPass = document.getElementById('newPass').value;
+  const confirmPass = document.getElementById('confirmPass').value;
+  if (newPass.length < 6) { err.textContent = t('passTooShort'); err.style.display = 'block'; return; }
+  if (newPass !== confirmPass) { err.textContent = t('passMismatch'); err.style.display = 'block'; return; }
+
+  const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, curPass);
+  currentUser.reauthenticateWithCredential(cred)
+    .then(() => currentUser.updatePassword(newPass))
+    .then(() => { alert(t('passUpdated')); closeSettingsModal(); })
+    .catch(e => { err.textContent = friendlyAuthError(e); err.style.display = 'block'; });
+}
+
+/* ---------------- Admin Panel ---------------- */
+function openAdminModal(){
+  const listEl = document.getElementById('adminUserList');
+  listEl.innerHTML = '';
+
+  if (DEMO_MODE || currentUser.isDemo) {
+    listEl.innerHTML = `
+      <div class="admin-row">
+        <div>
+          <div class="admin-user-name">${currentUser.displayName} <span style="color:var(--ink-soft);font-weight:500;">${t('youLabel')}</span></div>
+          <div class="admin-user-meta">${currentUser.email}</div>
+        </div>
+        <span class="status-pill active">${t('statusActive')}</span>
+      </div>
+      <p class="hint-text">${t('demoAdminNote')}</p>
+    `;
+    document.getElementById('adminBackdrop').style.display = 'flex';
+    return;
+  }
+
+  db.collection('users').get().then(snap => {
+    snap.forEach(doc => {
+      const u = doc.data();
+      const row = document.createElement('div');
+      row.className = 'admin-row';
+      const isSelf = u.uid === currentUser.uid;
+      const createdStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-';
+      const loginStr = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : t('never');
+      row.innerHTML = `
+        <div>
+          <div class="admin-user-name">${escapeHtml(u.name || u.email)} ${isSelf ? `<span style="color:var(--ink-soft);font-weight:500;">${t('youLabel')}</span>` : ''}</div>
+          <div class="admin-user-meta">${escapeHtml(u.email)}</div>
+          <div class="admin-user-meta">${t('accountCreated')}: ${createdStr} · ${t('lastLogin')}: ${loginStr}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="status-pill ${u.disabled ? 'disabled' : 'active'}">${u.disabled ? t('statusDisabled') : t('statusActive')}</span>
+          <div class="toggle-switch ${u.disabled ? '' : 'on'}" onclick="toggleUserDisabled('${u.uid}', ${!!u.disabled})">
+            <div class="knob"></div>
+          </div>
+        </div>
+      `;
+      listEl.appendChild(row);
+    });
+    document.getElementById('adminBackdrop').style.display = 'flex';
+  });
+}
+function toggleUserDisabled(uid, currentlyDisabled){
+  db.collection('users').doc(uid).set({ disabled: !currentlyDisabled }, { merge: true }).then(() => openAdminModal());
+}
+function closeAdminModal(){ document.getElementById('adminBackdrop').style.display = 'none'; }
+
+/* ---------------- Init ---------------- */
+applyI18n();
+</script>
+</body>
+</html>
