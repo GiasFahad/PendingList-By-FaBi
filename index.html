@@ -278,6 +278,8 @@
     </div>
   </div>
 
+  <div id="readOnlyBanner" style="display:none;background:#FFF6E5;color:#B8790A;padding:9px 14px;border-radius:12px;margin-bottom:10px;font-weight:600;font-size:12.5px;">🔒 <span id="readOnlyBannerText" data-i18n="readOnlyBannerMsg"></span></div>
+
   <div class="hero">
     <div>
       <p class="greet" data-i18n="greetLine">Today's status</p>
@@ -305,12 +307,22 @@
     <button onclick="openModal()">+</button>
   </div>
 
-  <div class="filters">
+  <div class="filters" id="statusFilters">
     <div class="chip active" data-filter="all" onclick="setFilter('all')" data-i18n="filterAll">All</div>
     <div class="chip" data-filter="pending" onclick="setFilter('pending')" data-i18n="filterPending">Pending</div>
     <div class="chip" data-filter="today" onclick="setFilter('today')" data-i18n="filterToday">Today</div>
     <div class="chip" data-filter="overdue" onclick="setFilter('overdue')" data-i18n="filterOverdue">Overdue</div>
     <div class="chip" data-filter="done" onclick="setFilter('done')" data-i18n="filterDone">Done</div>
+    <div class="chip" data-filter="upcoming" onclick="setFilter('upcoming')" data-i18n="filterUpcoming">Upcoming</div>
+  </div>
+
+  <div class="filters" id="categoryFilters">
+    <div class="chip active" data-cat="work" onclick="setCategoryFilter('work')" data-i18n="catWork">Work</div>
+    <div class="chip" data-cat="personal" onclick="setCategoryFilter('personal')" data-i18n="catPersonal">Personal</div>
+    <div class="chip" data-cat="trading" onclick="setCategoryFilter('trading')" data-i18n="catTrading">Trading</div>
+    <div class="chip" data-cat="content" onclick="setCategoryFilter('content')" data-i18n="catContent">Content</div>
+    <div class="chip" data-cat="other" onclick="setCategoryFilter('other')" data-i18n="catOther">Other</div>
+    <div class="chip" data-cat="all" onclick="setCategoryFilter('all')" data-i18n="filterAll">All</div>
   </div>
 
   <div class="toolbar">
@@ -542,6 +554,25 @@
     </div>
     <div class="modal-body">
       <p class="hint-text" data-i18n="adminHint">You can see login status and enable/disable accounts here. No one's task list — including yours — is visible to the admin.</p>
+
+      <div class="settings-section-title" data-i18n="adminHijriTitle">Global Hijri Default (used unless a user sets their own)</div>
+      <div id="adminHijriControls">
+        <div class="settings-row">
+          <span class="label" data-i18n="hijriSunsetLabel">Hijri date changes at (sunset)</span>
+          <input type="time" id="adminHijriSunsetInput" onchange="updateGlobalHijriSunset(this.value)" style="padding:7px 9px;border-radius:9px;border:1.5px solid var(--border);font-size:13px;">
+        </div>
+        <div class="settings-row">
+          <span class="label" data-i18n="hijriOffsetLabel">Adjust Hijri date (days)</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="icon-round" style="width:28px;height:28px;font-size:15px;" onclick="adjustGlobalHijriOffset(-1)">−</button>
+            <span id="adminHijriOffsetVal" class="num" style="min-width:22px;text-align:center;font-weight:700;">0</span>
+            <button class="icon-round" style="width:28px;height:28px;font-size:15px;" onclick="adjustGlobalHijriOffset(1)">+</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint-text" id="adminHijriDemoNote" style="display:none;" data-i18n="demoAdminNote"></p>
+      <hr class="section-divider">
+
       <div id="adminUserList"></div>
     </div>
   </div>
@@ -610,7 +641,7 @@ const I18N = {
     greetLine: "Today's status", heroDefault: "Let's get organized!",
     statTotal: "Total", statPending: "Pending", statDone: "Done", statOverdue: "Overdue",
     quickAddPh: "Type a new task and press Enter...",
-    filterAll: "All", filterPending: "Pending", filterToday: "Today", filterOverdue: "Overdue", filterDone: "Done",
+    filterAll: "All", filterPending: "Pending", filterToday: "Today", filterOverdue: "Overdue", filterDone: "Done", filterUpcoming: "Upcoming",
     sortNew: "Sort: Newest first", sortDue: "Sort: Due date", sortPriority: "Sort: Priority",
     exportPdf: "PDF Export", emptyText: "No tasks yet — add one above",
     modalNewTitle: "Add New Task", modalEditTitle: "Edit Task",
@@ -637,6 +668,10 @@ const I18N = {
     prefShowClock: "Show Live Clock", prefClock12h: "Clock in 12-hour format",
     hijriSunsetLabel: "Hijri date changes at (sunset)", hijriOffsetLabel: "Adjust Hijri date (days)",
     hijriHint: "Hijri date switches over at your set sunset time (not midnight) and can be nudged ± a day to match your local moon-sighting announcement.",
+    adminHijriTitle: "Global Hijri Default (used unless a user sets their own)",
+    readOnlyBannerMsg: "Your account has been disabled by the admin — you can view your existing tasks, but can't add, edit, complete, or delete anything.",
+    startsIn: "Starts in", upcomingFrom: "Upcoming from",
+    adminTotalTasks: "Total tasks", adminPendingTasks: "Pending",
     changePassTitle: "Change Password", currentPassLabel: "Current Password",
     newPassLabel: "New Password", confirmPassLabel: "Confirm New Password", updatePassBtn: "Update Password",
     adminTitle: "Admin Panel",
@@ -668,7 +703,7 @@ const I18N = {
     greetLine: "আজকের অবস্থা", heroDefault: "চলুন কাজ গোছাই!",
     statTotal: "মোট", statPending: "পেন্ডিং", statDone: "সম্পন্ন", statOverdue: "Overdue",
     quickAddPh: "নতুন কাজ লিখুন এবং Enter চাপুন...",
-    filterAll: "সব", filterPending: "পেন্ডিং", filterToday: "আজকের", filterOverdue: "Overdue", filterDone: "সম্পন্ন",
+    filterAll: "সব", filterPending: "পেন্ডিং", filterToday: "আজকের", filterOverdue: "Overdue", filterDone: "সম্পন্ন", filterUpcoming: "আসন্ন",
     sortNew: "সাজান: নতুন আগে", sortDue: "সাজান: Due Date", sortPriority: "সাজান: Priority",
     exportPdf: "PDF Export", emptyText: "কোনো কাজ নেই — উপরে থেকে একটা যোগ করুন",
     modalNewTitle: "নতুন কাজ যোগ করুন", modalEditTitle: "কাজ এডিট করুন",
@@ -695,6 +730,10 @@ const I18N = {
     prefShowClock: "Live Clock দেখাবে", prefClock12h: "Clock 12-ঘণ্টা ফরম্যাটে",
     hijriSunsetLabel: "Hijri তারিখ পরিবর্তন হবে (সূর্যাস্ত)", hijriOffsetLabel: "Hijri তারিখ কমান/বাড়ান (দিন)",
     hijriHint: "আপনার সেট করা সূর্যাস্তের সময়ে (মধ্যরাতে নয়) Hijri তারিখ পরিবর্তন হবে, আর স্থানীয় চাঁদ দেখার ঘোষণার সাথে মেলাতে ± ১ দিন adjust করা যাবে।",
+    adminHijriTitle: "Global Hijri Default (যতক্ষণ না কেউ নিজেরটা সেট করে)",
+    readOnlyBannerMsg: "আপনার অ্যাকাউন্ট admin দ্বারা disable করা হয়েছে — আগের কাজগুলো দেখতে পারবেন, কিন্তু নতুন কিছু add, edit, complete বা delete করতে পারবেন না।",
+    startsIn: "শুরু হতে বাকি", upcomingFrom: "শুরু হবে",
+    adminTotalTasks: "মোট কাজ", adminPendingTasks: "পেন্ডিং",
     changePassTitle: "পাসওয়ার্ড পরিবর্তন", currentPassLabel: "বর্তমান পাসওয়ার্ড",
     newPassLabel: "নতুন পাসওয়ার্ড", confirmPassLabel: "নতুন পাসওয়ার্ড আবার লিখুন", updatePassBtn: "পাসওয়ার্ড আপডেট করুন",
     adminTitle: "Admin Panel",
@@ -731,6 +770,8 @@ function setLanguage(lang){ currentLang = lang; localStorage.setItem('pendinglis
 /* ---------------- State ---------------- */
 let tasks = [];
 let currentFilter = 'all';
+let currentCategoryFilter = 'work';
+let readOnlyMode = false;
 let editingTaskId = null;
 let expandedDetails = new Set();
 
@@ -754,18 +795,75 @@ let headerPrefs = Object.assign(
 );
 function saveHeaderPrefs(){ localStorage.setItem('pendinglist_header_prefs', JSON.stringify(headerPrefs)); }
 
+/* Hijri prefs: DEMO mode keeps everything in localStorage. In real Firebase mode,
+   there are two layers — a global default any admin can set (settings/global in
+   Firestore, applies to everyone who hasn't chosen their own), and a personal
+   override each signed-in user can set for themselves (stored on their own user
+   doc), which always wins over the global default. */
 let hijriPrefs = Object.assign(
   { sunsetTime: '18:00', offsetDays: 0 },
   JSON.parse(localStorage.getItem('pendinglist_hijri_prefs') || '{}')
 );
+let hijriGlobalDefault = { sunsetTime: '18:00', offsetDays: 0 };
+let hijriUserOverride = { sunsetTime: null, offsetDays: null };
+
 function saveHijriPrefs(){ localStorage.setItem('pendinglist_hijri_prefs', JSON.stringify(hijriPrefs)); }
-function updateHijriSunset(val){ hijriPrefs.sunsetTime = val || '18:00'; saveHijriPrefs(); updateHeaderClock(); }
-function adjustHijriOffset(delta){
-  hijriPrefs.offsetDays = Math.max(-3, Math.min(3, (hijriPrefs.offsetDays || 0) + delta));
-  saveHijriPrefs();
+function recomputeHijriPrefs(){
+  hijriPrefs = {
+    sunsetTime: hijriUserOverride.sunsetTime != null ? hijriUserOverride.sunsetTime : (hijriGlobalDefault.sunsetTime || '18:00'),
+    offsetDays: hijriUserOverride.offsetDays != null ? hijriUserOverride.offsetDays : (hijriGlobalDefault.offsetDays || 0),
+  };
+}
+async function loadHijriPrefsFromFirestore(){
+  try {
+    const gdoc = await db.collection('settings').doc('global').get();
+    if (gdoc.exists) hijriGlobalDefault = Object.assign({ sunsetTime:'18:00', offsetDays:0 }, gdoc.data());
+  } catch (e) { console.error(e); }
+  try {
+    const udoc = await db.collection('users').doc(currentUser.uid).get();
+    const u = udoc.exists ? udoc.data() : {};
+    hijriUserOverride = {
+      sunsetTime: u.hijriSunsetOverride != null ? u.hijriSunsetOverride : null,
+      offsetDays: typeof u.hijriOffsetOverride === 'number' ? u.hijriOffsetOverride : null,
+    };
+  } catch (e) { console.error(e); }
+  recomputeHijriPrefs();
   updateHeaderClock();
+}
+function updateHijriSunset(val){
+  const v = val || '18:00';
+  if (DEMO_MODE || currentUser.isDemo) {
+    hijriPrefs.sunsetTime = v; saveHijriPrefs(); updateHeaderClock(); return;
+  }
+  hijriUserOverride.sunsetTime = v;
+  db.collection('users').doc(currentUser.uid).set({ hijriSunsetOverride: v }, { merge: true });
+  recomputeHijriPrefs(); updateHeaderClock();
+}
+function adjustHijriOffset(delta){
+  if (DEMO_MODE || currentUser.isDemo) {
+    hijriPrefs.offsetDays = Math.max(-3, Math.min(3, (hijriPrefs.offsetDays || 0) + delta));
+    saveHijriPrefs(); updateHeaderClock();
+  } else {
+    const base = hijriUserOverride.offsetDays != null ? hijriUserOverride.offsetDays : (hijriGlobalDefault.offsetDays || 0);
+    const newVal = Math.max(-3, Math.min(3, base + delta));
+    hijriUserOverride.offsetDays = newVal;
+    db.collection('users').doc(currentUser.uid).set({ hijriOffsetOverride: newVal }, { merge: true });
+    recomputeHijriPrefs(); updateHeaderClock();
+  }
   const el = document.getElementById('hijriOffsetVal');
   if (el) el.textContent = (hijriPrefs.offsetDays > 0 ? '+' : '') + hijriPrefs.offsetDays;
+}
+function updateGlobalHijriSunset(val){
+  hijriGlobalDefault.sunsetTime = val || '18:00';
+  db.collection('settings').doc('global').set({ sunsetTime: hijriGlobalDefault.sunsetTime }, { merge: true });
+  if (hijriUserOverride.sunsetTime == null) { recomputeHijriPrefs(); updateHeaderClock(); }
+}
+function adjustGlobalHijriOffset(delta){
+  hijriGlobalDefault.offsetDays = Math.max(-3, Math.min(3, (hijriGlobalDefault.offsetDays || 0) + delta));
+  db.collection('settings').doc('global').set({ offsetDays: hijriGlobalDefault.offsetDays }, { merge: true });
+  const el = document.getElementById('adminHijriOffsetVal');
+  if (el) el.textContent = (hijriGlobalDefault.offsetDays > 0 ? '+' : '') + hijriGlobalDefault.offsetDays;
+  if (hijriUserOverride.offsetDays == null) { recomputeHijriPrefs(); updateHeaderClock(); }
 }
 function toggleHeaderPref(key){
   headerPrefs[key] = !headerPrefs[key];
@@ -906,12 +1004,6 @@ function handleLogin(){
   auth.signInWithEmailAndPassword(email, pass)
     .then(async cred => {
       const uid = cred.user.uid;
-      const userDoc = await db.collection('users').doc(uid).get();
-      if (userDoc.exists && userDoc.data().disabled) {
-        await auth.signOut();
-        showAuthError(t('disabledLoginMsg'));
-        return;
-      }
       await db.collection('users').doc(uid).set({ lastLoginAt: Date.now() }, { merge: true });
     })
     .catch(e => showAuthError(friendlyAuthError(e)));
@@ -964,6 +1056,7 @@ if (!DEMO_MODE) {
       currentUser = user;
       const userDoc = await db.collection('users').doc(user.uid).get();
       currentUser.role = userDoc.exists ? (userDoc.data().role || 'user') : 'user';
+      currentUser.disabled = userDoc.exists ? !!userDoc.data().disabled : false;
       currentUser.createdAt = userDoc.exists ? userDoc.data().createdAt : Date.now();
       enterApp();
     } else {
@@ -984,6 +1077,26 @@ function enterApp(){
   document.getElementById('adminTag').style.display = currentUser.role === 'admin' ? 'inline' : 'none';
   document.getElementById('adminBtn').style.display = currentUser.role === 'admin' ? 'flex' : 'none';
   document.getElementById('quickAddInput').addEventListener('keydown', e => { if (e.key === 'Enter') quickAdd(); });
+
+  readOnlyMode = !!currentUser.disabled;
+  const banner = document.getElementById('readOnlyBanner');
+  const quickAddInput = document.getElementById('quickAddInput');
+  const addBtn = document.querySelector('.add-bar button');
+  if (readOnlyMode) {
+    banner.style.display = 'block';
+    document.getElementById('readOnlyBannerText').textContent = t('readOnlyBannerMsg');
+    quickAddInput.disabled = true;
+    addBtn.disabled = true;
+    addBtn.style.opacity = '0.4';
+  } else {
+    banner.style.display = 'none';
+    quickAddInput.disabled = false;
+    addBtn.disabled = false;
+    addBtn.style.opacity = '1';
+  }
+
+  if (!DEMO_MODE && !currentUser.isDemo) loadHijriPrefsFromFirestore();
+
   applyI18n();
   loadTasks();
 }
@@ -1036,6 +1149,7 @@ function deleteTaskRecord(id){
 
 /* ---------------- Quick Add ---------------- */
 function quickAdd(){
+  if (readOnlyMode) return;
   const input = document.getElementById('quickAddInput');
   const title = input.value.trim();
   if(!title) return;
@@ -1061,6 +1175,7 @@ function updateRepeatFieldsVisibility(){
 }
 
 function openModal(taskId){
+  if (readOnlyMode) return;
   editingTaskId = taskId || null;
   document.getElementById('modalTitle').textContent = taskId ? t('modalEditTitle') : t('modalNewTitle');
   const now = new Date();
@@ -1101,6 +1216,7 @@ function openModal(taskId){
 function closeModal(){ document.getElementById('modalBackdrop').style.display = 'none'; }
 
 function saveModalTask(){
+  if (readOnlyMode) return;
   const title = document.getElementById('mTitle').value.trim();
   if(!title){ document.getElementById('mTitle').focus(); return; }
   const data = {
@@ -1125,6 +1241,7 @@ function saveModalTask(){
 
 /* ---------------- Toggle / Delete (custom confirmation on Done) ---------------- */
 function toggleDone(id){
+  if (readOnlyMode) return;
   const tk = tasks.find(x => x.id === id);
   if (!tk) return;
   const eff = getEffectiveState(tk);
@@ -1140,7 +1257,7 @@ function toggleDone(id){
     });
   }
 }
-function deleteTask(id){ showConfirm(t('confirmDeleteMsg'), () => deleteTaskRecord(id)); }
+function deleteTask(id){ if (readOnlyMode) return; showConfirm(t('confirmDeleteMsg'), () => deleteTaskRecord(id)); }
 
 function toggleDetailsExpand(id){
   if (expandedDetails.has(id)) expandedDetails.delete(id); else expandedDetails.add(id);
@@ -1174,41 +1291,58 @@ function getPeriodInfo(task, now){
 
 function getEffectiveState(task){
   const now = new Date();
+  let start = null;
+  if (task.startDate) {
+    const [sh, sm] = (task.startTime || '00:00').split(':').map(Number);
+    start = new Date(task.startDate); start.setHours(sh, sm, 0, 0);
+  }
   if (task.repeatType && task.repeatType !== 'none') {
     const info = getPeriodInfo(task, now);
     const active = !info.activeFrom || now >= info.activeFrom;
     const done = task.lastCompletedPeriod === info.periodKey;
-    return { due: info.due, done, active, periodKey: info.periodKey, repeating: true };
+    return { due: info.due, done, active, periodKey: info.periodKey, repeating: true, start, activeFrom: info.activeFrom };
   }
   let due = null;
   if (task.dueDate) {
     const [hh, mm] = (task.dueTime || '23:59').split(':').map(Number);
     due = new Date(task.dueDate); due.setHours(hh, mm, 0, 0);
   }
-  return { due, done: !!task.done, active: true, periodKey: null, repeating: false };
+  return { due, done: !!task.done, active: true, periodKey: null, repeating: false, start, activeFrom: null };
 }
 
 /* ---------------- Filters & Sort ---------------- */
 function setFilter(f){
   currentFilter = f;
-  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  document.querySelectorAll('#statusFilters .chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
+  render();
+}
+function setCategoryFilter(cat){
+  currentCategoryFilter = cat;
+  document.querySelectorAll('#categoryFilters .chip').forEach(c => c.classList.toggle('active', c.dataset.cat === cat));
   render();
 }
 function todayStr(){ return isoDate(new Date()); }
 
 function getFilteredSorted(){
   const now = new Date();
-  let list = tasks
-    .map(tk => ({ task: tk, eff: getEffectiveState(tk) }))
-    .filter(x => x.eff.active);
+  const mapped = tasks.map(tk => ({ task: tk, eff: getEffectiveState(tk) }));
+  let list;
 
-  const isOverdueX = x => x.eff.due && !x.eff.done && x.eff.due < now;
-  const isTodayX = x => x.eff.due && !x.eff.done && isoDate(x.eff.due) === todayStr();
+  if (currentFilter === 'upcoming') {
+    // monthlyRange repeating tasks before their start-of-range day live here instead
+    // of vanishing from every view.
+    list = mapped.filter(x => !x.eff.active);
+  } else {
+    list = mapped.filter(x => x.eff.active);
+    const isOverdueX = x => x.eff.due && !x.eff.done && x.eff.due < now;
+    const isTodayX = x => x.eff.due && !x.eff.done && isoDate(x.eff.due) === todayStr();
+    if (currentFilter === 'pending') list = list.filter(x => !x.eff.done);
+    if (currentFilter === 'done') list = list.filter(x => x.eff.done);
+    if (currentFilter === 'today') list = list.filter(isTodayX);
+    if (currentFilter === 'overdue') list = list.filter(isOverdueX);
+  }
 
-  if (currentFilter === 'pending') list = list.filter(x => !x.eff.done);
-  if (currentFilter === 'done') list = list.filter(x => x.eff.done);
-  if (currentFilter === 'today') list = list.filter(isTodayX);
-  if (currentFilter === 'overdue') list = list.filter(isOverdueX);
+  if (currentCategoryFilter !== 'all') list = list.filter(x => x.task.category === currentCategoryFilter);
 
   const sortBy = document.getElementById('sortSelect').value;
   const prioRank = { high: 0, medium: 1, low: 2 };
@@ -1250,6 +1384,20 @@ function formatTime12h(hhmm){
   h = h % 12; if (h === 0) h = 12;
   return `${h}:${String(m).padStart(2,'0')} ${ampm}`;
 }
+function formatStartCountdown(start){
+  if (!start) return null;
+  const now = new Date();
+  if (now >= start) return null; // already started — counting turns off
+  const diffMs = start.getTime() - now.getTime();
+  const dd = Math.floor(diffMs / (1000*60*60*24));
+  const hh = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
+  const mm = Math.floor((diffMs % (1000*60*60)) / (1000*60));
+  const parts = [];
+  if (dd > 0) parts.push(`${dd}${t('d')}`);
+  parts.push(`${hh}${t('h')}`);
+  parts.push(`${mm}${t('m')}`);
+  return `${t('startsIn')} ${parts.join(' ')}`;
+}
 
 /* ---------------- Render ---------------- */
 function render(){
@@ -1267,6 +1415,10 @@ function render(){
 
     const startHtml = tk.startDate
       ? `<span class="tag start">🕐 ${t('startLabel')}: ${tk.startDate}${tk.startTime ? ' · ' + formatTime12h(tk.startTime) : ''}</span>` : '';
+    const startCountdown = formatStartCountdown(eff.start);
+    const startCountdownHtml = startCountdown ? `<span class="tag countdown">${startCountdown}</span>` : '';
+    const upcomingHtml = !eff.active && eff.activeFrom
+      ? `<span class="tag repeat">📆 ${t('upcomingFrom')}: ${isoDate(eff.activeFrom)}</span>` : '';
 
     let dueTagHtml = '';
     if (eff.due) {
@@ -1289,7 +1441,7 @@ function render(){
     card.style.setProperty('--cat-color', cat.color);
     card.style.setProperty('--cat-bg', cat.bg);
     card.innerHTML = `
-      <div class="check ${eff.done ? 'checked' : ''}" onclick="toggleDone('${tk.id}')">${eff.done ? '✓' : ''}</div>
+      <div class="check ${eff.done ? 'checked' : ''}" ${readOnlyMode ? '' : `onclick="toggleDone('${tk.id}')"`} style="${readOnlyMode ? 'opacity:0.5;' : ''}">${eff.done ? '✓' : ''}</div>
       <div class="t-body">
         <div class="t-title">${escapeHtml(tk.title)}</div>
         ${detailsHtml}
@@ -1297,15 +1449,18 @@ function render(){
           <span class="tag cat">${t(cat.key)}</span>
           <span class="tag"><span class="prio-dot" style="background:${prio.color}"></span>${t(prio.key)}</span>
           ${startHtml}
+          ${startCountdownHtml}
+          ${upcomingHtml}
           ${dueTagHtml}
           ${countdownHtml}
           ${repeatHtml}
         </div>
       </div>
+      ${readOnlyMode ? '' : `
       <div class="t-actions">
         <div class="icon-btn" onclick="openModal('${tk.id}')">✎</div>
         <div class="icon-btn del" onclick="deleteTask('${tk.id}')">🗑</div>
-      </div>
+      </div>`}
     `;
     grid.appendChild(card);
   });
@@ -1436,6 +1591,9 @@ function openAdminModal(){
   listEl.innerHTML = '';
 
   if (DEMO_MODE || currentUser.isDemo) {
+    document.getElementById('adminHijriControls').style.display = 'none';
+    document.getElementById('adminHijriDemoNote').style.display = 'block';
+    document.getElementById('adminHijriDemoNote').textContent = t('demoAdminNote');
     listEl.innerHTML = `
       <div class="admin-row">
         <div>
@@ -1444,37 +1602,63 @@ function openAdminModal(){
         </div>
         <span class="status-pill active">${t('statusActive')}</span>
       </div>
-      <p class="hint-text">${t('demoAdminNote')}</p>
     `;
     document.getElementById('adminBackdrop').style.display = 'flex';
     return;
   }
 
+  document.getElementById('adminHijriControls').style.display = 'block';
+  document.getElementById('adminHijriDemoNote').style.display = 'none';
+  document.getElementById('adminHijriSunsetInput').value = hijriGlobalDefault.sunsetTime || '18:00';
+  document.getElementById('adminHijriOffsetVal').textContent = (hijriGlobalDefault.offsetDays > 0 ? '+' : '') + (hijriGlobalDefault.offsetDays || 0);
+
   db.collection('users').get().then(snap => {
-    snap.forEach(doc => {
-      const u = doc.data();
-      const row = document.createElement('div');
-      row.className = 'admin-row';
+    const users = snap.docs.map(d => d.data());
+    listEl.innerHTML = users.map(u => {
       const isSelf = u.uid === currentUser.uid;
       const createdStr = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '-';
       const loginStr = u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : t('never');
-      row.innerHTML = `
-        <div>
-          <div class="admin-user-name">${escapeHtml(u.name || u.email)} ${isSelf ? `<span style="color:var(--ink-soft);font-weight:500;">${t('youLabel')}</span>` : ''}</div>
-          <div class="admin-user-meta">${escapeHtml(u.email)}</div>
-          <div class="admin-user-meta">${t('accountCreated')}: ${createdStr} · ${t('lastLogin')}: ${loginStr}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="status-pill ${u.disabled ? 'disabled' : 'active'}">${u.disabled ? t('statusDisabled') : t('statusActive')}</span>
-          <div class="toggle-switch ${u.disabled ? '' : 'on'}" onclick="toggleUserDisabled('${u.uid}', ${!!u.disabled})">
-            <div class="knob"></div>
+      const safeId = (u.uid || '').replace(/[^a-zA-Z0-9]/g, '');
+      return `
+        <div class="admin-row">
+          <div>
+            <div class="admin-user-name">${escapeHtml(u.name || u.email)} ${isSelf ? `<span style="color:var(--ink-soft);font-weight:500;">${t('youLabel')}</span>` : ''}</div>
+            <div class="admin-user-meta">${escapeHtml(u.email)}</div>
+            <div class="admin-user-meta">${t('accountCreated')}: ${createdStr} · ${t('lastLogin')}: ${loginStr}</div>
+            <div class="admin-user-meta">${t('adminTotalTasks')}: <span id="adminTotal_${safeId}">…</span> · ${t('adminPendingTasks')}: <span id="adminPending_${safeId}">…</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="status-pill ${u.disabled ? 'disabled' : 'active'}">${u.disabled ? t('statusDisabled') : t('statusActive')}</span>
+            <div class="toggle-switch ${u.disabled ? '' : 'on'}" onclick="toggleUserDisabled('${u.uid}', ${!!u.disabled})">
+              <div class="knob"></div>
+            </div>
           </div>
         </div>
       `;
-      listEl.appendChild(row);
-    });
+    }).join('');
     document.getElementById('adminBackdrop').style.display = 'flex';
+
+    // Fetch only aggregate counts (never task content) per user, async.
+    users.forEach(u => {
+      const safeId = (u.uid || '').replace(/[^a-zA-Z0-9]/g, '');
+      getUserTaskCounts(u.uid).then(counts => {
+        const totalEl = document.getElementById('adminTotal_' + safeId);
+        const pendingEl = document.getElementById('adminPending_' + safeId);
+        if (totalEl) totalEl.textContent = counts.total;
+        if (pendingEl) pendingEl.textContent = counts.pending;
+      });
+    });
   });
+}
+async function getUserTaskCounts(uid){
+  try {
+    const totalSnap = await db.collection('tasks').where('uid', '==', uid).count().get();
+    const pendingSnap = await db.collection('tasks').where('uid', '==', uid).where('done', '==', false).count().get();
+    return { total: totalSnap.data().count, pending: pendingSnap.data().count };
+  } catch (e) {
+    console.error(e);
+    return { total: '–', pending: '–' };
+  }
 }
 function toggleUserDisabled(uid, currentlyDisabled){
   db.collection('users').doc(uid).set({ disabled: !currentlyDisabled }, { merge: true }).then(() => openAdminModal());
