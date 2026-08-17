@@ -316,20 +316,17 @@
     <div class="chip" data-filter="upcoming" onclick="setFilter('upcoming')" data-i18n="filterUpcoming">Upcoming</div>
   </div>
 
-  <div class="filters" id="categoryFilters">
-    <div class="chip active" data-cat="work" onclick="setCategoryFilter('work')" data-i18n="catWork">Work</div>
-    <div class="chip" data-cat="personal" onclick="setCategoryFilter('personal')" data-i18n="catPersonal">Personal</div>
-    <div class="chip" data-cat="trading" onclick="setCategoryFilter('trading')" data-i18n="catTrading">Trading</div>
-    <div class="chip" data-cat="content" onclick="setCategoryFilter('content')" data-i18n="catContent">Content</div>
-    <div class="chip" data-cat="other" onclick="setCategoryFilter('other')" data-i18n="catOther">Other</div>
-    <div class="chip" data-cat="all" onclick="setCategoryFilter('all')" data-i18n="filterAll">All</div>
+  <div class="settings-row" style="background:#fff;border-radius:12px;padding:9px 12px;margin-bottom:10px;border:none;">
+    <span class="label" data-i18n="homeLabel">🏠 Home</span>
+    <select id="categoryFilterSelect" onchange="handleCategoryFilterChange(this.value)"></select>
   </div>
 
   <div class="toolbar">
     <select id="sortSelect" onchange="render()">
-      <option value="created" data-i18n="sortNew">Sort: Newest first</option>
+      <option value="start" data-i18n="sortStart">Sort: Start date</option>
       <option value="due" data-i18n="sortDue">Sort: Due date</option>
       <option value="priority" data-i18n="sortPriority">Sort: Priority</option>
+      <option value="created" data-i18n="sortNew">Sort: Newest first</option>
     </select>
     <button class="export-btn" onclick="exportPDF()">⬇ <span data-i18n="exportPdf">PDF Export</span></button>
   </div>
@@ -365,13 +362,7 @@
       <div class="row2">
         <div class="field">
           <label data-i18n="mCategoryLabel">Category</label>
-          <select id="mCategory">
-            <option value="work" data-i18n="catWork">Work</option>
-            <option value="personal" data-i18n="catPersonal">Personal</option>
-            <option value="trading" data-i18n="catTrading">Trading</option>
-            <option value="content" data-i18n="catContent">Content</option>
-            <option value="other" data-i18n="catOther">Other</option>
-          </select>
+          <select id="mCategory"></select>
         </div>
         <div class="field">
           <label data-i18n="mPriorityLabel">Priority</label>
@@ -420,18 +411,33 @@
         </select>
       </div>
 
-      <div class="field" id="repeatWeeklyField" style="display:none;">
-        <label data-i18n="repeatWeekdayLabel">Which day of the week?</label>
-        <select id="mRepeatWeekday">
-          <option value="0" data-i18n="daySun">Sunday</option>
-          <option value="1" data-i18n="dayMon">Monday</option>
-          <option value="2" data-i18n="dayTue">Tuesday</option>
-          <option value="3" data-i18n="dayWed">Wednesday</option>
-          <option value="4" data-i18n="dayThu">Thursday</option>
-          <option value="5" data-i18n="dayFri">Friday</option>
-          <option value="6" data-i18n="daySat">Saturday</option>
-        </select>
+      <div class="row2" id="repeatWeeklyField" style="display:none;">
+        <div class="field">
+          <label data-i18n="repeatWeekStartLabel">Start weekday</label>
+          <select id="mRepeatWeekStart">
+            <option value="0" data-i18n="daySun">Sunday</option>
+            <option value="1" data-i18n="dayMon">Monday</option>
+            <option value="2" data-i18n="dayTue">Tuesday</option>
+            <option value="3" data-i18n="dayWed">Wednesday</option>
+            <option value="4" data-i18n="dayThu">Thursday</option>
+            <option value="5" data-i18n="dayFri">Friday</option>
+            <option value="6" data-i18n="daySat">Saturday</option>
+          </select>
+        </div>
+        <div class="field">
+          <label data-i18n="repeatWeekEndLabel">Due weekday</label>
+          <select id="mRepeatWeekEnd">
+            <option value="0" data-i18n="daySun">Sunday</option>
+            <option value="1" data-i18n="dayMon">Monday</option>
+            <option value="2" data-i18n="dayTue">Tuesday</option>
+            <option value="3" data-i18n="dayWed">Wednesday</option>
+            <option value="4" data-i18n="dayThu">Thursday</option>
+            <option value="5" data-i18n="dayFri">Friday</option>
+            <option value="6" data-i18n="daySat">Saturday</option>
+          </select>
+        </div>
       </div>
+      <p class="hint-text" id="repeatWeeklyHint" style="display:none;" data-i18n="repeatWeeklyHint">Pick the same day for both to repeat on just one weekday. Pick a range (e.g. Mon–Fri) to have it sit in Upcoming until the start day, like the monthly range option.</p>
 
       <div class="field" id="repeatMonthlyField" style="display:none;">
         <label data-i18n="repeatDayLabel">Which date each month? (1-31)</label>
@@ -507,6 +513,10 @@
           <button class="icon-round" style="width:28px;height:28px;font-size:15px;" onclick="adjustHijriOffset(1)">+</button>
         </div>
       </div>
+      <div class="settings-row" id="hijriResetRow" style="display:none;">
+        <span class="label" data-i18n="hijriResetLabel">You're using your own Hijri setting (overrides admin default)</span>
+        <button class="btn-ghost" style="flex:none;padding:7px 11px;font-size:12px;" onclick="resetHijriToGlobal()" data-i18n="hijriResetBtn">Use admin default</button>
+      </div>
       <div class="settings-row">
         <span class="label" data-i18n="prefShowClock">Show Live Clock</span>
         <div class="toggle-switch" id="toggleShowClock" onclick="toggleHeaderPref('showClock')"><div class="knob"></div></div>
@@ -578,6 +588,26 @@
   </div>
 </div>
 
+<!-- ================= ADD CATEGORY MODAL ================= -->
+<div class="modal-backdrop" id="categoryModalBackdrop">
+  <div class="modal" style="max-width:340px;">
+    <div class="modal-head">
+      <h3 data-i18n="addCategoryTitle">Add Category</h3>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closeCategoryModal()" data-i18n="cancelBtn">Cancel</button>
+        <button class="btn-save" onclick="saveNewCategory()" data-i18n="saveBtn">Save</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label data-i18n="categoryNameLabel">Category name</label>
+        <input type="text" id="newCategoryInput" data-i18n-ph="categoryNamePh" placeholder="e.g. Study">
+      </div>
+      <p class="hint-text" data-i18n="categoryPrivateHint">Only you will see this category.</p>
+    </div>
+  </div>
+</div>
+
 <!-- ================= CONFIRM MODAL ================= -->
 <div class="modal-backdrop" id="confirmBackdrop">
   <div class="modal" style="max-width:340px;">
@@ -642,6 +672,10 @@ const I18N = {
     statTotal: "Total", statPending: "Pending", statDone: "Done", statOverdue: "Overdue",
     quickAddPh: "Type a new task and press Enter...",
     filterAll: "All", filterPending: "Pending", filterToday: "Today", filterOverdue: "Overdue", filterDone: "Done", filterUpcoming: "Upcoming",
+    homeLabel: "🏠 Home", addCategoryTitle: "Add Category", categoryNameLabel: "Category name", categoryNamePh: "e.g. Study",
+    categoryPrivateHint: "Only you will see this category.",
+    sortStart: "Sort: Start date",
+    repeatWeekStartLabel: "Start weekday", repeatWeekEndLabel: "Due weekday",
     sortNew: "Sort: Newest first", sortDue: "Sort: Due date", sortPriority: "Sort: Priority",
     exportPdf: "PDF Export", emptyText: "No tasks yet — add one above",
     modalNewTitle: "Add New Task", modalEditTitle: "Edit Task",
@@ -660,6 +694,7 @@ const I18N = {
     repeatDayLabel: "Which date each month? (1-31)",
     repeatRangeStartLabel: "Start Date (1-31)", repeatRangeEndLabel: "Due Date (1-31)",
     repeatRangeHint: "This task will automatically appear in your pending list every month starting from the start date.",
+    repeatWeeklyHint: "Pick the same day for both to repeat on just one weekday. Pick a range (e.g. Mon–Fri) to have it sit in Upcoming until the start day, like the monthly range option.",
     cancelBtn: "Cancel", saveBtn: "Save", closeBtn: "Close",
     settingsTitle: "Settings", languageLabel: "Language", generalSection: "General",
     headerSettingsTitle: "Header Display",
@@ -667,6 +702,7 @@ const I18N = {
     prefShowBangla: "Show Bangla Date", prefShowHijri: "Show Hijri (Arabic) Date",
     prefShowClock: "Show Live Clock", prefClock12h: "Clock in 12-hour format",
     hijriSunsetLabel: "Hijri date changes at (sunset)", hijriOffsetLabel: "Adjust Hijri date (days)",
+    hijriResetLabel: "You're using your own Hijri setting (overrides admin default)", hijriResetBtn: "Use admin default",
     hijriHint: "Hijri date switches over at your set sunset time (not midnight) and can be nudged ± a day to match your local moon-sighting announcement.",
     adminHijriTitle: "Global Hijri Default (used unless a user sets their own)",
     readOnlyBannerMsg: "Your account has been disabled by the admin — you can view your existing tasks, but can't add, edit, complete, or delete anything.",
@@ -704,6 +740,10 @@ const I18N = {
     statTotal: "মোট", statPending: "পেন্ডিং", statDone: "সম্পন্ন", statOverdue: "Overdue",
     quickAddPh: "নতুন কাজ লিখুন এবং Enter চাপুন...",
     filterAll: "সব", filterPending: "পেন্ডিং", filterToday: "আজকের", filterOverdue: "Overdue", filterDone: "সম্পন্ন", filterUpcoming: "আসন্ন",
+    homeLabel: "🏠 Home", addCategoryTitle: "Category যোগ করুন", categoryNameLabel: "Category এর নাম", categoryNamePh: "যেমন: পড়াশোনা",
+    categoryPrivateHint: "শুধু আপনিই এই category দেখতে পাবেন।",
+    sortStart: "সাজান: Start Date",
+    repeatWeekStartLabel: "শুরুর দিন (সপ্তাহ)", repeatWeekEndLabel: "Due দিন (সপ্তাহ)",
     sortNew: "সাজান: নতুন আগে", sortDue: "সাজান: Due Date", sortPriority: "সাজান: Priority",
     exportPdf: "PDF Export", emptyText: "কোনো কাজ নেই — উপরে থেকে একটা যোগ করুন",
     modalNewTitle: "নতুন কাজ যোগ করুন", modalEditTitle: "কাজ এডিট করুন",
@@ -722,6 +762,7 @@ const I18N = {
     repeatDayLabel: "প্রতি মাসের কোন তারিখ? (1-31)",
     repeatRangeStartLabel: "শুরুর তারিখ (1-31)", repeatRangeEndLabel: "Due তারিখ (1-31)",
     repeatRangeHint: "এই কাজটি প্রতি মাসে শুরুর তারিখ থেকে অটো পেন্ডিং লিস্টে চলে আসবে।",
+    repeatWeeklyHint: "দুটোতে একই দিন দিলে শুধু এক দিনে রিপিট হবে। রেঞ্জ দিলে (যেমন সোম–শুক্র), শুরুর দিন না আসা পর্যন্ত এটা Upcoming এ থাকবে — মাসিক রেঞ্জের মতোই।",
     cancelBtn: "বাতিল", saveBtn: "সেভ করুন", closeBtn: "বন্ধ করুন",
     settingsTitle: "Settings", languageLabel: "Language", generalSection: "General",
     headerSettingsTitle: "Header Display",
@@ -729,6 +770,7 @@ const I18N = {
     prefShowBangla: "বাংলা তারিখ দেখাবে", prefShowHijri: "হিজরি (আরবি) তারিখ দেখাবে",
     prefShowClock: "Live Clock দেখাবে", prefClock12h: "Clock 12-ঘণ্টা ফরম্যাটে",
     hijriSunsetLabel: "Hijri তারিখ পরিবর্তন হবে (সূর্যাস্ত)", hijriOffsetLabel: "Hijri তারিখ কমান/বাড়ান (দিন)",
+    hijriResetLabel: "আপনি নিজের Hijri সেটিং ব্যবহার করছেন (admin default এর বদলে)", hijriResetBtn: "Admin default ব্যবহার করুন",
     hijriHint: "আপনার সেট করা সূর্যাস্তের সময়ে (মধ্যরাতে নয়) Hijri তারিখ পরিবর্তন হবে, আর স্থানীয় চাঁদ দেখার ঘোষণার সাথে মেলাতে ± ১ দিন adjust করা যাবে।",
     adminHijriTitle: "Global Hijri Default (যতক্ষণ না কেউ নিজেরটা সেট করে)",
     readOnlyBannerMsg: "আপনার অ্যাকাউন্ট admin দ্বারা disable করা হয়েছে — আগের কাজগুলো দেখতে পারবেন, কিন্তু নতুন কিছু add, edit, complete বা delete করতে পারবেন না।",
@@ -788,6 +830,82 @@ const PRIORITY_META = {
   low:    { key:'prioLow',    color: '#00B8A9' },
 };
 
+/* ---------------- Categories (Home) — per-account, default Work & Personal ---------------- */
+let userCategories = ['work', 'personal'];
+const CATEGORY_COLOR_PALETTE = ['#6C5CE7','#00B8A9','#FFC145','#FF6B6B','#8073F0','#00A8E8','#E17055','#B8790A'];
+function hexToRgba(hex, alpha){
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function getCategoryDisplay(catKey){
+  if (CATEGORY_META[catKey]) {
+    const m = CATEGORY_META[catKey];
+    return { label: t(m.key), color: m.color, bg: m.bg };
+  }
+  let hash = 0;
+  for (let i = 0; i < catKey.length; i++) hash = (hash * 31 + catKey.charCodeAt(i)) >>> 0;
+  const color = CATEGORY_COLOR_PALETTE[hash % CATEGORY_COLOR_PALETTE.length];
+  return { label: catKey.charAt(0).toUpperCase() + catKey.slice(1), color, bg: hexToRgba(color, 0.14) };
+}
+function categoriesLocalKey(){ return 'pendinglist_categories_' + (currentUser ? currentUser.uid : 'guest'); }
+function loadUserCategories(){
+  if (DEMO_MODE || currentUser.isDemo) {
+    const saved = JSON.parse(localStorage.getItem(categoriesLocalKey()) || 'null');
+    userCategories = saved && saved.length ? saved : ['work', 'personal'];
+    populateCategorySelects();
+  } else {
+    db.collection('users').doc(currentUser.uid).get().then(doc => {
+      const cats = doc.exists && Array.isArray(doc.data().categories) ? doc.data().categories : null;
+      userCategories = cats && cats.length ? cats : ['work', 'personal'];
+      populateCategorySelects();
+    });
+  }
+}
+function saveUserCategories(){
+  if (DEMO_MODE || currentUser.isDemo) {
+    localStorage.setItem(categoriesLocalKey(), JSON.stringify(userCategories));
+  } else {
+    db.collection('users').doc(currentUser.uid).set({ categories: userCategories }, { merge: true });
+  }
+}
+function populateCategorySelects(){
+  const mCat = document.getElementById('mCategory');
+  const prevM = mCat.value;
+  mCat.innerHTML = userCategories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(getCategoryDisplay(c).label)}</option>`).join('');
+  if (userCategories.includes(prevM)) mCat.value = prevM;
+
+  const filterSel = document.getElementById('categoryFilterSelect');
+  const options = ['<option value="all">' + t('filterAll') + '</option>']
+    .concat(userCategories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(getCategoryDisplay(c).label)}</option>`))
+    .concat(['<option value="__add__">+ ' + t('addCategoryTitle') + '…</option>']);
+  filterSel.innerHTML = options.join('');
+  filterSel.value = userCategories.includes(currentCategoryFilter) || currentCategoryFilter === 'all' ? currentCategoryFilter : 'work';
+}
+function handleCategoryFilterChange(val){
+  if (val === '__add__') {
+    document.getElementById('categoryFilterSelect').value = currentCategoryFilter;
+    openAddCategoryPrompt();
+    return;
+  }
+  currentCategoryFilter = val;
+  render();
+}
+function openAddCategoryPrompt(){
+  document.getElementById('newCategoryInput').value = '';
+  document.getElementById('categoryModalBackdrop').style.display = 'flex';
+}
+function closeCategoryModal(){ document.getElementById('categoryModalBackdrop').style.display = 'none'; }
+function saveNewCategory(){
+  const name = document.getElementById('newCategoryInput').value.trim();
+  if (!name) return;
+  const exists = userCategories.some(c => c.toLowerCase() === name.toLowerCase());
+  if (!exists) { userCategories.push(name); saveUserCategories(); }
+  currentCategoryFilter = exists ? userCategories.find(c => c.toLowerCase() === name.toLowerCase()) : name;
+  document.getElementById('categoryModalBackdrop').style.display = 'none';
+  populateCategorySelects();
+  render();
+}
+
 /* ---------------- Header Display Preferences ---------------- */
 let headerPrefs = Object.assign(
   { showDate:true, showWeekday:true, showWeek:true, showBangla:true, showHijri:true, showClock:true, clock12h:true },
@@ -837,7 +955,7 @@ function updateHijriSunset(val){
   }
   hijriUserOverride.sunsetTime = v;
   db.collection('users').doc(currentUser.uid).set({ hijriSunsetOverride: v }, { merge: true });
-  recomputeHijriPrefs(); updateHeaderClock();
+  recomputeHijriPrefs(); updateHeaderClock(); syncHijriResetRowVisibility();
 }
 function adjustHijriOffset(delta){
   if (DEMO_MODE || currentUser.isDemo) {
@@ -848,10 +966,29 @@ function adjustHijriOffset(delta){
     const newVal = Math.max(-3, Math.min(3, base + delta));
     hijriUserOverride.offsetDays = newVal;
     db.collection('users').doc(currentUser.uid).set({ hijriOffsetOverride: newVal }, { merge: true });
-    recomputeHijriPrefs(); updateHeaderClock();
+    recomputeHijriPrefs(); updateHeaderClock(); syncHijriResetRowVisibility();
   }
   const el = document.getElementById('hijriOffsetVal');
   if (el) el.textContent = (hijriPrefs.offsetDays > 0 ? '+' : '') + hijriPrefs.offsetDays;
+}
+function resetHijriToGlobal(){
+  if (DEMO_MODE || currentUser.isDemo) return;
+  hijriUserOverride = { sunsetTime: null, offsetDays: null };
+  db.collection('users').doc(currentUser.uid).set({
+    hijriSunsetOverride: firebase.firestore.FieldValue.delete(),
+    hijriOffsetOverride: firebase.firestore.FieldValue.delete()
+  }, { merge: true });
+  recomputeHijriPrefs();
+  updateHeaderClock();
+  document.getElementById('hijriSunsetInput').value = hijriPrefs.sunsetTime;
+  document.getElementById('hijriOffsetVal').textContent = (hijriPrefs.offsetDays > 0 ? '+' : '') + hijriPrefs.offsetDays;
+  syncHijriResetRowVisibility();
+}
+function syncHijriResetRowVisibility(){
+  const row = document.getElementById('hijriResetRow');
+  if (!row) return;
+  const hasOverride = hijriUserOverride.sunsetTime != null || hijriUserOverride.offsetDays != null;
+  row.style.display = (!DEMO_MODE && !currentUser.isDemo && hasOverride) ? 'flex' : 'none';
 }
 function updateGlobalHijriSunset(val){
   hijriGlobalDefault.sunsetTime = val || '18:00';
@@ -881,11 +1018,12 @@ function syncSettingsToggles(){
 }
 
 function getWeekNumber(d){
-  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  // Sunday-based week counting (week 1 = the week containing Jan 1) rather than
+  // ISO-8601's Monday-based system, since that's the convention expected here.
+  const start = new Date(d.getFullYear(), 0, 1);
+  const dayOfYear = Math.floor((d - start) / 86400000) + 1;
+  const jan1Weekday = start.getDay(); // 0 = Sunday
+  return Math.ceil((dayOfYear + jan1Weekday) / 7);
 }
 
 /* Bangla calendar — revised (2019) fixed-length calendar used in Bangladesh.
@@ -1096,6 +1234,7 @@ function enterApp(){
   }
 
   if (!DEMO_MODE && !currentUser.isDemo) loadHijriPrefsFromFirestore();
+  loadUserCategories();
 
   applyI18n();
   loadTasks();
@@ -1168,7 +1307,8 @@ function isoTime(d){ return String(d.getHours()).padStart(2,'0') + ':' + String(
 
 function updateRepeatFieldsVisibility(){
   const val = document.getElementById('mRepeatType').value;
-  document.getElementById('repeatWeeklyField').style.display = val === 'weekly' ? 'block' : 'none';
+  document.getElementById('repeatWeeklyField').style.display = val === 'weekly' ? 'flex' : 'none';
+  document.getElementById('repeatWeeklyHint').style.display = val === 'weekly' ? 'block' : 'none';
   document.getElementById('repeatMonthlyField').style.display = val === 'monthly' ? 'block' : 'none';
   document.getElementById('repeatRangeField').style.display = val === 'monthlyRange' ? 'flex' : 'none';
   document.getElementById('repeatRangeHint').style.display = val === 'monthlyRange' ? 'block' : 'none';
@@ -1191,7 +1331,8 @@ function openModal(taskId){
     document.getElementById('mDueDate').value = tk.dueDate || '';
     document.getElementById('mDueTime').value = tk.dueTime || '';
     document.getElementById('mRepeatType').value = tk.repeatType || 'none';
-    document.getElementById('mRepeatWeekday').value = tk.repeatWeekday ?? 1;
+    document.getElementById('mRepeatWeekStart').value = tk.repeatWeekStart ?? tk.repeatWeekday ?? 1;
+    document.getElementById('mRepeatWeekEnd').value = tk.repeatWeekEnd ?? tk.repeatWeekday ?? 1;
     document.getElementById('mRepeatDay').value = tk.repeatDay ?? 1;
     document.getElementById('mRepeatRangeStart').value = tk.repeatRangeStart ?? 1;
     document.getElementById('mRepeatRangeEnd').value = tk.repeatRangeEnd ?? 10;
@@ -1205,7 +1346,8 @@ function openModal(taskId){
     document.getElementById('mDueDate').value = '';
     document.getElementById('mDueTime').value = '';
     document.getElementById('mRepeatType').value = 'none';
-    document.getElementById('mRepeatWeekday').value = 1;
+    document.getElementById('mRepeatWeekStart').value = 1;
+    document.getElementById('mRepeatWeekEnd').value = 1;
     document.getElementById('mRepeatDay').value = 1;
     document.getElementById('mRepeatRangeStart').value = 1;
     document.getElementById('mRepeatRangeEnd').value = 10;
@@ -1229,7 +1371,8 @@ function saveModalTask(){
     dueDate: document.getElementById('mDueDate').value || null,
     dueTime: document.getElementById('mDueTime').value || null,
     repeatType: document.getElementById('mRepeatType').value,
-    repeatWeekday: parseInt(document.getElementById('mRepeatWeekday').value, 10),
+    repeatWeekStart: parseInt(document.getElementById('mRepeatWeekStart').value, 10),
+    repeatWeekEnd: parseInt(document.getElementById('mRepeatWeekEnd').value, 10),
     repeatDay: parseInt(document.getElementById('mRepeatDay').value, 10),
     repeatRangeStart: parseInt(document.getElementById('mRepeatRangeStart').value, 10),
     repeatRangeEnd: parseInt(document.getElementById('mRepeatRangeEnd').value, 10),
@@ -1268,12 +1411,15 @@ function toggleDetailsExpand(id){
 function getPeriodInfo(task, now){
   now = now || new Date();
   if (task.repeatType === 'weekly') {
+    const startWd = task.repeatWeekStart ?? task.repeatWeekday ?? 1;
+    const endWd = task.repeatWeekEnd ?? task.repeatWeekday ?? startWd;
     const day = now.getDay();
-    const diff = task.repeatWeekday - day;
-    const occ = new Date(now); occ.setHours(23,59,0,0); occ.setDate(now.getDate() + diff);
-    const weekStart = new Date(now); weekStart.setDate(now.getDate() - day);
+    const weekStart = new Date(now); weekStart.setHours(0,0,0,0); weekStart.setDate(now.getDate() - day);
+    const dueDate = new Date(weekStart); dueDate.setDate(weekStart.getDate() + endWd); dueDate.setHours(23,59,0,0);
+    const activeFromDate = new Date(weekStart); activeFromDate.setDate(weekStart.getDate() + startWd);
     const periodKey = `w-${weekStart.getFullYear()}-${weekStart.getMonth()}-${weekStart.getDate()}`;
-    return { periodKey, due: occ, activeFrom: null };
+    // Same start/due weekday = old single-day behavior (always active, no Upcoming staging).
+    return { periodKey, due: dueDate, activeFrom: startWd === endWd ? null : activeFromDate };
   }
   if (task.repeatType === 'monthly') {
     const y = now.getFullYear(), m = now.getMonth();
@@ -1316,11 +1462,6 @@ function setFilter(f){
   document.querySelectorAll('#statusFilters .chip').forEach(c => c.classList.toggle('active', c.dataset.filter === f));
   render();
 }
-function setCategoryFilter(cat){
-  currentCategoryFilter = cat;
-  document.querySelectorAll('#categoryFilters .chip').forEach(c => c.classList.toggle('active', c.dataset.cat === cat));
-  render();
-}
 function todayStr(){ return isoDate(new Date()); }
 
 function getFilteredSorted(){
@@ -1346,17 +1487,22 @@ function getFilteredSorted(){
 
   const sortBy = document.getElementById('sortSelect').value;
   const prioRank = { high: 0, medium: 1, low: 2 };
-  if (sortBy === 'due') {
-    list.sort((a,b) => {
+  list.sort((a, b) => {
+    // Done tasks always sink to the bottom, regardless of which sort mode is picked.
+    if (a.eff.done !== b.eff.done) return a.eff.done ? 1 : -1;
+    if (sortBy === 'due') {
       const ad = a.eff.due ? a.eff.due.getTime() : Infinity;
       const bd = b.eff.due ? b.eff.due.getTime() : Infinity;
       return ad - bd;
-    });
-  } else if (sortBy === 'priority') {
-    list.sort((a,b) => prioRank[a.task.priority] - prioRank[b.task.priority]);
-  } else {
-    list.sort((a,b) => (b.task.createdAt||0) - (a.task.createdAt||0));
-  }
+    }
+    if (sortBy === 'priority') return prioRank[a.task.priority] - prioRank[b.task.priority];
+    if (sortBy === 'start') {
+      const as = a.eff.start ? a.eff.start.getTime() : Infinity;
+      const bs = b.eff.start ? b.eff.start.getTime() : Infinity;
+      return as - bs;
+    }
+    return (b.task.createdAt || 0) - (a.task.createdAt || 0);
+  });
   return list;
 }
 
@@ -1407,7 +1553,7 @@ function render(){
   document.getElementById('emptyState').style.display = list.length ? 'none' : 'block';
 
   list.forEach(({task: tk, eff}) => {
-    const cat = CATEGORY_META[tk.category] || CATEGORY_META.other;
+    const cat = getCategoryDisplay(tk.category);
     const prio = PRIORITY_META[tk.priority] || PRIORITY_META.medium;
     const now = new Date();
     const overdue = eff.due && !eff.done && eff.due < now;
@@ -1446,7 +1592,7 @@ function render(){
         <div class="t-title">${escapeHtml(tk.title)}</div>
         ${detailsHtml}
         <div class="t-meta">
-          <span class="tag cat">${t(cat.key)}</span>
+          <span class="tag cat">${escapeHtml(cat.label)}</span>
           <span class="tag"><span class="prio-dot" style="background:${prio.color}"></span>${t(prio.key)}</span>
           ${startHtml}
           ${startCountdownHtml}
@@ -1517,7 +1663,7 @@ function exportPDF(){
   doc.setFontSize(10);
   pending.forEach(x => {
     const tk = x.task;
-    const cat = CATEGORY_META[tk.category]?.key ? t(CATEGORY_META[tk.category].key) : 'Other';
+    const cat = getCategoryDisplay(tk.category).label;
     const prio = PRIORITY_META[tk.priority]?.key ? t(PRIORITY_META[tk.priority].key) : 'Medium';
     const due = x.eff.due ? `  |  Due: ${isoDate(x.eff.due)}` : '';
     const line = `- ${tk.title}  [${cat} / ${prio}]${due}`;
@@ -1553,6 +1699,7 @@ function openSettingsModal(){
   syncSettingsToggles();
   document.getElementById('hijriSunsetInput').value = hijriPrefs.sunsetTime || '18:00';
   document.getElementById('hijriOffsetVal').textContent = (hijriPrefs.offsetDays > 0 ? '+' : '') + (hijriPrefs.offsetDays || 0);
+  syncHijriResetRowVisibility();
   applyI18n();
   document.getElementById('settingsBackdrop').style.display = 'flex';
 }
